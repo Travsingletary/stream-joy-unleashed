@@ -5,12 +5,17 @@ interface AccessVerificationResult {
   hasAccess: boolean;
   isLoading: boolean;
   error: string | null;
+  credentials: { username: string | null; password: string | null };
 }
 
 export const useAccessVerification = (): AccessVerificationResult => {
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<{ username: string | null; password: string | null }>({
+    username: null,
+    password: null
+  });
 
   useEffect(() => {
     const verifyAccess = async () => {
@@ -18,6 +23,8 @@ export const useAccessVerification = (): AccessVerificationResult => {
         // 1. Check for access token in localStorage
         const accessToken = localStorage.getItem('steadystream_access_token');
         const purchaseId = localStorage.getItem('steadystream_purchase_id');
+        const username = localStorage.getItem('steadystream_username');
+        const password = localStorage.getItem('steadystream_password');
 
         if (!accessToken || !purchaseId) {
           setHasAccess(false);
@@ -32,6 +39,12 @@ export const useAccessVerification = (): AccessVerificationResult => {
         const isValid = true; // Replace with actual verification logic
 
         setHasAccess(isValid);
+        
+        // Set the credentials if they exist
+        setCredentials({
+          username,
+          password
+        });
       } catch (error) {
         console.error("Access verification error:", error);
         setError("Failed to verify access");
@@ -44,5 +57,5 @@ export const useAccessVerification = (): AccessVerificationResult => {
     verifyAccess();
   }, []);
 
-  return { hasAccess, isLoading, error };
+  return { hasAccess, isLoading, error, credentials };
 };

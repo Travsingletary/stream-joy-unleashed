@@ -15,6 +15,8 @@ const VerifyPurchasePage: React.FC = () => {
   const [purchaseValid, setPurchaseValid] = useState(false);
   const purchaseToken = searchParams.get('token');
   const purchaseId = searchParams.get('purchase_id');
+  const username = searchParams.get('username');
+  const password = searchParams.get('password');
 
   useEffect(() => {
     const verifyPurchase = async () => {
@@ -46,6 +48,12 @@ const VerifyPurchasePage: React.FC = () => {
           // Store access token in localStorage
           localStorage.setItem('steadystream_access_token', purchaseToken);
           localStorage.setItem('steadystream_purchase_id', purchaseId);
+          
+          // Store the username and password if provided
+          if (username && password) {
+            localStorage.setItem('steadystream_username', username);
+            localStorage.setItem('steadystream_password', password);
+          }
           
           toast({
             title: "Access Granted",
@@ -83,7 +91,7 @@ const VerifyPurchasePage: React.FC = () => {
     };
 
     verifyPurchase();
-  }, [purchaseId, purchaseToken]);
+  }, [purchaseId, purchaseToken, username, password]);
 
   return (
     <div className="min-h-screen bg-steadystream-black flex flex-col items-center justify-center p-4">
