@@ -12,6 +12,7 @@ export interface Program {
   episodeTitle?: string;
   episodeNumber?: number;
   seasonNumber?: number;
+  icon?: string; // Adding the missing icon property
 }
 
 export interface EPGChannel {

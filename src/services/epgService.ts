@@ -1,3 +1,4 @@
+
 import { EPGData, EPGChannel, Program, TimeSlot } from "../types/epg";
 
 // Helper function to parse XML
@@ -104,6 +105,7 @@ export const parseXMLTV = (xmlContent: string): EPGData => {
       description,
       start,
       stop,
+      end: stop, // Ensure end is also set for backward compatibility
       channelId,
       category,
       rating,
