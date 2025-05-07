@@ -12,8 +12,10 @@ import ProfilesPage from "./pages/ProfilesPage";
 import ChannelsPage from "./pages/ChannelsPage";
 import PlayerPage from "./pages/PlayerPage";
 import AdminNotifyPage from "./pages/AdminNotifyPage";
+import VerifyPurchasePage from "./pages/VerifyPurchasePage";
 import { ProfileProvider } from "./hooks/useProfiles";
 import { NotificationPrompt } from "./components/notification/NotificationPrompt";
+import PurchaseProtectedRoute from "./components/auth/PurchaseProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -25,11 +27,31 @@ const AppWithProviders = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/profiles" element={<ProfilesPage />} />
-        <Route path="/channels" element={<ChannelsPage />} />
-        <Route path="/player/:channelId" element={<PlayerPage />} />
-        <Route path="/epg" element={<EPGPage />} />
+        <Route path="/verify-purchase" element={<VerifyPurchasePage />} />
+        
+        {/* Protected Routes */}
+        <Route path="/profiles" element={
+          <PurchaseProtectedRoute>
+            <ProfilesPage />
+          </PurchaseProtectedRoute>
+        } />
+        <Route path="/channels" element={
+          <PurchaseProtectedRoute>
+            <ChannelsPage />
+          </PurchaseProtectedRoute>
+        } />
+        <Route path="/player/:channelId" element={
+          <PurchaseProtectedRoute>
+            <PlayerPage />
+          </PurchaseProtectedRoute>
+        } />
+        <Route path="/epg" element={
+          <PurchaseProtectedRoute>
+            <EPGPage />
+          </PurchaseProtectedRoute>
+        } />
         <Route path="/admin-notify" element={<AdminNotifyPage />} />
+        
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
 import { XtreamCredentials } from '../types/playlist';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
@@ -9,12 +9,24 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { toast } from '../hooks/use-toast';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, ExternalLink } from 'lucide-react';
+import { useAccessVerification } from '../hooks/useAccessVerification';
+import Logo from '@/components/ui/logo';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { loadM3U, loadXtream, isLoading } = usePlaylist();
   const [accessCode, setAccessCode] = useState('');
+  const { hasAccess } = useAccessVerification();
+  
+  // If the user already has access, redirect to the channels page
+  useEffect(() => {
+    if (hasAccess) {
+      const from = location.state?.from?.pathname || "/channels";
+      navigate(from, { replace: true });
+    }
+  }, [hasAccess, navigate, location]);
   
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,12 +121,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-steadystream-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img 
-            src="/logo-full.png" 
-            alt="Steadystream" 
-            className="h-16 mb-4 animate-fade-in"
-            style={{ filter: "drop-shadow(0 0 8px rgba(212, 175, 55, 0.5))" }}
-          />
+          <Logo variant="full" size="lg" className="mb-4 animate-fade-in" />
           <p className="text-steadystream-secondary">Connect to start watching</p>
         </div>
         
@@ -178,6 +185,20 @@ const LoginPage: React.FC = () => {
                 {isLoading ? 'Connecting...' : 'Connect'}
               </Button>
             </form>
+            
+            <div className="mt-6 pt-4 border-t border-steadystream-gold/10">
+              <p className="text-sm text-steadystream-secondary text-center mb-4">
+                Don't have an access code?
+              </p>
+              <Button
+                variant="outline"
+                className="w-full border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/5"
+                onClick={() => window.open('https://your-website.com/purchase', '_blank')}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Purchase Access
+              </Button>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-center">
             <Button 
