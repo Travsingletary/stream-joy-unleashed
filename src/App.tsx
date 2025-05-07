@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +32,12 @@ const AppWithProviders = () => {
         <Route path="/verify-purchase" element={<VerifyPurchasePage />} />
         
         {/* Protected Routes */}
-        <Route element={<PurchaseProtectedRoute />}>
+        <Route element={
+          <PurchaseProtectedRoute>
+            {/* We need to pass children to PurchaseProtectedRoute */}
+            <></>
+          </PurchaseProtectedRoute>
+        }>
           <Route path="/channels" element={<ChannelsPage />} />
           <Route path="/player/:channelId" element={<PlayerPage />} />
           <Route path="/epg" element={<EPGPage />} />
