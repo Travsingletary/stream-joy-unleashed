@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { Tv, CalendarDays, LogIn } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -31,9 +32,11 @@ const Index = () => {
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-black border border-steadystream-gold/20 shadow-lg hover:gold-glow transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-steadystream-gold-light">Welcome to Steadystream</CardTitle>
+            <CardTitle className="text-steadystream-gold-light flex items-center gap-2">
+              <Tv className="h-5 w-5" /> Start Watching
+            </CardTitle>
             <CardDescription className="text-steadystream-secondary">
-              Discover premium content at your fingertips
+              Browse channels and start streaming right away
             </CardDescription>
           </CardHeader>
           <CardContent className="text-white/80">
@@ -48,22 +51,24 @@ const Index = () => {
               className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black font-medium"
               onClick={() => navigate("/channels")}
             >
-              Explore Channels
+              Browse Live TV
             </Button>
           </CardFooter>
         </Card>
 
         <Card className="bg-black border border-steadystream-gold/20 shadow-lg hover:gold-glow transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-steadystream-gold-light">Program Guide</CardTitle>
+            <CardTitle className="text-steadystream-gold-light flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" /> Program Guide
+            </CardTitle>
             <CardDescription className="text-steadystream-secondary">
-              Browse the electronic program guide
+              See what's on now and coming up next
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-white/80">
             <p>
-              View program schedules and details with our elegant electronic program guide (EPG).
-              See what's currently playing and what's coming up next across all your channels.
+              View program schedules and details with our elegant program guide.
+              Never miss your favorite shows with our comprehensive listings and timely reminders.
             </p>
             <div className="grid gap-3 mt-3">
               <div className="flex items-center p-2 rounded-md bg-steadystream-gold/10 border border-steadystream-gold/20">
@@ -128,8 +133,19 @@ const Index = () => {
         ))}
       </div>
 
+      {/* Connect service button */}
+      <div className="mt-12 mb-4">
+        <Button 
+          variant="outline"
+          className="border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/10"
+          onClick={() => navigate("/login")}
+        >
+          <LogIn className="mr-2 h-4 w-4" /> Connect My Service
+        </Button>
+      </div>
+
       {/* Footer */}
-      <footer className="mt-16 text-center text-steadystream-secondary text-sm">
+      <footer className="mt-8 text-center text-steadystream-secondary text-sm">
         <p>© 2025 Steadystream • Premium Streaming Experience</p>
       </footer>
     </div>
