@@ -11,7 +11,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll([
         '/',
         '/index.html',
-        '/favicon.ico'
+        '/logo-icon.png'
       ]);
     })
   );
@@ -47,8 +47,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Steadystream Update';
   const options = {
     body: data.body || 'New content is available!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/logo-icon.png',
+    badge: '/logo-badge.png',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/'

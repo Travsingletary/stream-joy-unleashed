@@ -108,8 +108,13 @@ const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-steadystream-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-steadystream-gold mb-2">SteadyStream</h1>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img 
+            src="/logo-full.png" 
+            alt="Steadystream" 
+            className="h-16 mb-4 animate-fade-in"
+            style={{ filter: "drop-shadow(0 0 8px rgba(212, 175, 55, 0.5))" }}
+          />
           <p className="text-steadystream-secondary">Connect to start watching</p>
         </div>
         
@@ -184,6 +189,14 @@ const LoginPage: React.FC = () => {
             </Button>
           </CardFooter>
         </Card>
+        
+        <div className="mt-8 text-center">
+          <img 
+            src="/logo-symbol.png" 
+            alt="" 
+            className="h-8 mx-auto opacity-30 hover:opacity-60 transition-opacity"
+          />
+        </div>
       </div>
     </div>
   );
