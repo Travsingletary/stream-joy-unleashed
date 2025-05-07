@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Bell } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import Logo from '@/components/ui/logo';
 
 export const NotificationSettings: React.FC = () => {
   const { 
@@ -46,6 +47,9 @@ export const NotificationSettings: React.FC = () => {
   return (
     <Card className="bg-black border-steadystream-gold/20">
       <CardHeader>
+        <div className="flex items-center justify-center mb-2">
+          <Logo variant="symbol" size="sm" />
+        </div>
         <CardTitle className="flex items-center gap-2 text-steadystream-gold-light">
           <Bell className="h-5 w-5" />
           Notification Settings

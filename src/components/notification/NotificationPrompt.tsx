@@ -4,6 +4,7 @@ import { useNotification } from '@/hooks/useNotification';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Bell } from 'lucide-react';
+import Logo from '@/components/ui/logo';
 
 // Time to wait before showing the notification prompt (3 seconds)
 const PROMPT_DELAY = 3000;
@@ -45,6 +46,9 @@ export const NotificationPrompt: React.FC = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="bg-black border-steadystream-gold/20 max-w-md">
         <DialogHeader>
+          <div className="flex items-center justify-center mb-4">
+            <Logo variant="symbol" size="md" className="mb-2" />
+          </div>
           <DialogTitle className="flex items-center gap-2 text-steadystream-gold-light">
             <Bell className="h-5 w-5" />
             Stay Updated with Steadystream
