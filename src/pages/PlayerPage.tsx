@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
@@ -81,8 +80,8 @@ const PlayerPage: React.FC = () => {
     
     const now = Date.now();
     const channelEpg = epgData.channels.find(epgChannel => {
-      // Try matching by epg_channel_id if available
-      if (channel.epg_channel_id && epgChannel.id === channel.epg_channel_id) {
+      // Try matching by epgChannelId if available
+      if (channel.epgChannelId && epgChannel.id === channel.epgChannelId) {
         return true;
       }
       
