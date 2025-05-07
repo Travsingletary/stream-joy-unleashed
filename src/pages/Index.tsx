@@ -55,28 +55,29 @@ const Index = () => {
 
         <Card className="bg-black border border-steadystream-gold/20 shadow-lg hover:gold-glow transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-steadystream-gold-light">Get Started</CardTitle>
+            <CardTitle className="text-steadystream-gold-light">Program Guide</CardTitle>
             <CardDescription className="text-steadystream-secondary">
-              Set up your streaming service quickly
+              Browse the electronic program guide
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-white/80">
             <p>
-              Connect to your preferred streaming service using:
+              View program schedules and details with our elegant electronic program guide (EPG).
+              See what's currently playing and what's coming up next across all your channels.
             </p>
-            <div className="grid gap-4">
-              <div className="flex items-center p-3 rounded-md bg-steadystream-gold/10 border border-steadystream-gold/20">
-                <div className="h-8 w-8 rounded-full bg-steadystream-gold flex items-center justify-center text-black font-bold mr-3">1</div>
+            <div className="grid gap-3 mt-3">
+              <div className="flex items-center p-2 rounded-md bg-steadystream-gold/10 border border-steadystream-gold/20">
+                <div className="h-8 w-8 rounded-full bg-steadystream-gold flex items-center justify-center text-black font-bold mr-3">✓</div>
                 <div>
-                  <h3 className="font-medium text-steadystream-gold-light">Xtream Codes</h3>
-                  <p className="text-sm text-white/60">Login with your provider credentials</p>
+                  <h3 className="font-medium text-steadystream-gold-light">Live Progress</h3>
+                  <p className="text-xs text-white/60">See what's playing now with progress indicators</p>
                 </div>
               </div>
-              <div className="flex items-center p-3 rounded-md bg-steadystream-gold/10 border border-steadystream-gold/20">
-                <div className="h-8 w-8 rounded-full bg-steadystream-gold flex items-center justify-center text-black font-bold mr-3">2</div>
+              <div className="flex items-center p-2 rounded-md bg-steadystream-gold/10 border border-steadystream-gold/20">
+                <div className="h-8 w-8 rounded-full bg-steadystream-gold flex items-center justify-center text-black font-bold mr-3">✓</div>
                 <div>
-                  <h3 className="font-medium text-steadystream-gold-light">M3U Playlist</h3>
-                  <p className="text-sm text-white/60">Import your existing M3U playlists</p>
+                  <h3 className="font-medium text-steadystream-gold-light">Program Details</h3>
+                  <p className="text-xs text-white/60">View detailed information about each program</p>
                 </div>
               </div>
             </div>
@@ -84,9 +85,9 @@ const Index = () => {
           <CardFooter>
             <Button 
               className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black font-medium"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/epg")}
             >
-              Connect Now
+              Open Program Guide
             </Button>
           </CardFooter>
         </Card>
