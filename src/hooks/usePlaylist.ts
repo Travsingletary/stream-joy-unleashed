@@ -25,7 +25,7 @@ export const usePlaylist = (): UsePlaylistReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadM3U = async (url: string) => {
+  const loadM3U = async (url: string): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -39,8 +39,6 @@ export const usePlaylist = (): UsePlaylistReturn => {
         title: "Playlist loaded",
         description: `Successfully loaded ${data.channels.length} channels`,
       });
-      
-      return data;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load M3U playlist';
       setError(errorMessage);
@@ -57,7 +55,7 @@ export const usePlaylist = (): UsePlaylistReturn => {
     }
   };
 
-  const loadXtream = async (credentials: XtreamCredentials) => {
+  const loadXtream = async (credentials: XtreamCredentials): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -71,8 +69,6 @@ export const usePlaylist = (): UsePlaylistReturn => {
         title: "Xtream playlist loaded",
         description: `Successfully loaded ${data.channels.length} channels`,
       });
-      
-      return data;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load Xtream playlist';
       setError(errorMessage);

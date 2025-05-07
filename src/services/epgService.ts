@@ -1,5 +1,4 @@
-
-import { EPGData, EPGChannel, Program } from "../types/epg";
+import { EPGData, EPGChannel, Program, TimeSlot } from "../types/epg";
 
 // Helper function to parse XML
 const parseXML = (xmlString: string): Document => {
