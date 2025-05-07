@@ -1,82 +1,88 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
-import { Button } from '../components/ui/button';
-import { Play, Pause, Maximize, Minimize, ChevronLeft, Volume2, VolumeX, Heart } from 'lucide-react';
-import { toast } from '../hooks/use-toast';
-import { Channel } from '../types/playlist';
 import { useEPG } from '../hooks/useEPG';
 import { Program } from '../types/epg';
+import { useProfiles } from '../hooks/useProfiles';
+import { Channel } from '../types/playlist';
+import { toast } from '@/hooks/use-toast';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Heart, Volume2, VolumeX, Maximize, Pause, Play } from 'lucide-react';
 
 const PlayerPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
-  const { getChannel, playlist } = usePlaylist();
+  const { playlist } = usePlaylist();
+  const { epgData, isLoading: epgLoading } = useEPG();
+  const { currentProfile, updateProfile } = useProfiles();
   const navigate = useNavigate();
   
-  // State
-  const [channel, setChannel] = useState<Channel | undefined>();
+  const [channel, setChannel] = useState<Channel | null>(null);
+  const [currentProgram, setCurrentProgram] = useState<Program | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [watchStartTime, setWatchStartTime] = useState<number>(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [currentProgram, setCurrentProgram] = useState<Program | null>(null);
   
-  // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
-  const controlsTimeoutRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Get EPG data for current program information
-  const { epgData } = useEPG({
-    autoLoad: true,
-    channels: playlist?.channels || []
-  });
-  
-  // Effects
   useEffect(() => {
-    if (!channelId) {
-      navigate('/channels');
-      return;
-    }
+    if (!playlist || !channelId) return;
     
-    const channelData = getChannel(channelId);
-    if (!channelData) {
+    const foundChannel = playlist.channels.find(ch => ch.id === channelId);
+    if (foundChannel) {
+      setChannel(foundChannel);
+      
+      // Check if channel is in favorites
+      if (currentProfile) {
+        setIsFavorite(currentProfile.favorites.includes(channelId));
+      }
+      
+      // Update last watched
+      if (currentProfile) {
+        updateProfile({
+          ...currentProfile,
+          lastWatched: channelId
+        });
+      }
+      
+      // Start tracking watch time
+      setWatchStartTime(Date.now());
+      
+      document.title = `Steadystream - ${foundChannel.name}`;
+    } else {
       toast({
         variant: "destructive",
         title: "Channel not found",
-        description: "The requested channel could not be found.",
+        description: "The channel you're looking for doesn't exist.",
       });
       navigate('/channels');
-      return;
     }
     
-    setChannel(channelData);
-    
-    // Check if this channel is in favorites
-    const storedFavorites = localStorage.getItem('steadystream_favorite_channels');
-    const favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
-    setIsFavorite(favorites.includes(channelId));
-    
-    // Find current program from EPG data
-    updateCurrentProgram(channelData);
-  }, [channelId, getChannel, navigate, epgData]);
-  
-  // Update current program periodically
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (channel) {
-        updateCurrentProgram(channel);
+    return () => {
+      document.title = 'Steadystream';
+      // Record watch time when leaving
+      if (channel && currentProfile && watchStartTime > 0) {
+        recordWatchHistory();
       }
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [channel, epgData]);
+    };
+  }, [playlist, channelId, currentProfile]);
   
-  // Function to find the current program for this channel
-  const updateCurrentProgram = (channel: Channel) => {
-    if (!epgData) return;
+  // Update EPG program info
+  useEffect(() => {
+    if (!epgLoading && epgData && channel) {
+      updateCurrentProgram();
+      
+      // Set interval to update program info every minute
+      const intervalId = setInterval(updateCurrentProgram, 60000);
+      return () => clearInterval(intervalId);
+    }
+  }, [epgLoading, epgData, channel]);
+  
+  const updateCurrentProgram = () => {
+    if (!epgData || !channel) return;
     
     const now = Date.now();
     const channelEpg = epgData.channels.find(epgChannel => {
@@ -85,108 +91,48 @@ const PlayerPage: React.FC = () => {
         return true;
       }
       
-      // Try matching by name (case-insensitive)
-      const normalizedChannelName = channel.name.toLowerCase().replace(/\s+/g, '');
-      const normalizedEpgName = epgChannel.name.toLowerCase().replace(/\s+/g, '');
-      
-      return normalizedChannelName === normalizedEpgName;
+      // Try matching by name
+      const channelName = channel.name.toLowerCase().replace(/\s+/g, '');
+      const epgChannelName = epgChannel.name.toLowerCase().replace(/\s+/g, '');
+      return channelName.includes(epgChannelName) || epgChannelName.includes(channelName);
     });
     
-    if (channelEpg) {
-      const program = channelEpg.programs.find(p => p.start <= now && p.stop > now);
-      setCurrentProgram(program || null);
+    if (!channelEpg) {
+      setCurrentProgram(null);
+      return;
+    }
+    
+    // Find current program
+    const currentProg = channelEpg.programs.find(
+      program => program.start <= now && program.end > now
+    );
+    
+    setCurrentProgram(currentProg || null);
+  };
+  
+  const handleMuteToggle = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(!isMuted);
     }
   };
   
-  // Toggle favorite status
-  const toggleFavorite = () => {
-    if (!channelId) return;
-    
-    const storedFavorites = localStorage.getItem('steadystream_favorite_channels');
-    const favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
-    
-    let newFavorites: string[];
-    if (isFavorite) {
-      // Remove from favorites
-      newFavorites = favorites.filter((id: string) => id !== channelId);
-      toast({
-        title: "Removed from favorites",
-        description: `${channel?.name || 'Channel'} removed from your favorites`,
-      });
-    } else {
-      // Add to favorites
-      newFavorites = [...favorites, channelId];
-      toast({
-        title: "Added to favorites",
-        description: `${channel?.name || 'Channel'} added to your favorites`,
-      });
-    }
-    
-    localStorage.setItem('steadystream_favorite_channels', JSON.stringify(newFavorites));
-    setIsFavorite(!isFavorite);
-  };
-  
-  // Auto-hide controls after inactivity
-  useEffect(() => {
-    const showControlsTemporarily = () => {
-      setControlsVisible(true);
-      
-      // Clear any existing timeout
-      if (controlsTimeoutRef.current !== null) {
-        window.clearTimeout(controlsTimeoutRef.current);
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
       }
-      
-      // Set a new timeout to hide controls
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        if (isPlaying) {
-          setControlsVisible(false);
-        }
-      }, 3000);
-    };
-    
-    const handleMouseMove = () => showControlsTemporarily();
-    const handleTouchStart = () => showControlsTemporarily();
-    
-    // Add event listeners
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('touchstart', handleTouchStart);
-    
-    // Initial show
-    showControlsTemporarily();
-    
-    return () => {
-      // Clean up
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('touchstart', handleTouchStart);
-      
-      if (controlsTimeoutRef.current !== null) {
-        window.clearTimeout(controlsTimeoutRef.current);
-      }
-    };
-  }, [isPlaying]);
-  
-  // Handle play/pause
-  const togglePlayPause = () => {
-    if (!videoRef.current) return;
-    
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(e => {
-        console.error("Error playing video:", e);
-        setError("Could not play video. Please try again.");
-      });
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
+      setIsPlaying(!isPlaying);
     }
   };
   
-  // Handle fullscreen toggle
-  const toggleFullscreen = () => {
-    if (!playerContainerRef.current) return;
+  const handleFullscreenToggle = () => {
+    if (!containerRef.current) return;
     
     if (!document.fullscreenElement) {
-      playerContainerRef.current.requestFullscreen().catch(err => {
+      containerRef.current.requestFullscreen().catch(err => {
         toast({
           variant: "destructive",
           title: "Fullscreen error",
@@ -198,49 +144,85 @@ const PlayerPage: React.FC = () => {
     }
   };
   
-  // Track fullscreen state changes
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
     
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
   
-  // Toggle mute
-  const toggleMute = () => {
-    if (!videoRef.current) return;
+  const recordWatchHistory = () => {
+    if (!channel || !currentProfile || watchStartTime === 0) return;
     
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(!isMuted);
-  };
-  
-  // Handle video error
-  const handleError = () => {
-    setError("Failed to load video stream. Please check your connection or try another channel.");
-    setIsPlaying(false);
-  };
-  
-  // Return to channels list
-  const goBack = () => {
-    navigate('/channels');
-  };
-  
-  // Store last watched channel
-  useEffect(() => {
-    if (channel) {
-      localStorage.setItem('steadystream_last_watched', channelId || '');
+    const watchDuration = (Date.now() - watchStartTime) / 1000; // in seconds
+    if (watchDuration < 5) return; // Don't record very short views
+    
+    // Determine time of day
+    const hour = new Date().getHours();
+    let timeOfDay = 'morning';
+    if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
+    else if (hour >= 17 && hour < 22) timeOfDay = 'evening';
+    else if (hour >= 22 || hour < 5) timeOfDay = 'night';
+    
+    const watchHistoryItem = {
+      channelId: channel.id,
+      name: channel.name,
+      logo: channel.logo,
+      timestamp: watchStartTime,
+      watchDuration,
+      category: channel.group,
+      genre: channel.group,
+      timeOfDay
+    };
+    
+    const updatedProfile = {
+      ...currentProfile,
+      watchHistory: [...currentProfile.watchHistory, watchHistoryItem]
+    };
+    
+    // Keep only the last 50 watch history items
+    if (updatedProfile.watchHistory.length > 50) {
+      updatedProfile.watchHistory = updatedProfile.watchHistory.slice(-50);
     }
-  }, [channel, channelId]);
+    
+    updateProfile(updatedProfile);
+  };
+  
+  const handleFavoriteToggle = () => {
+    if (!channel || !currentProfile) return;
+    
+    let updatedFavorites = [...currentProfile.favorites];
+    
+    if (isFavorite) {
+      // Remove from favorites
+      updatedFavorites = updatedFavorites.filter(id => id !== channelId);
+      toast({
+        title: "Removed from favorites",
+        description: `${channel.name} has been removed from your favorites.`,
+      });
+    } else {
+      // Add to favorites
+      updatedFavorites.push(channelId!);
+      toast({
+        title: "Added to favorites",
+        description: `${channel.name} has been added to your favorites.`,
+      });
+    }
+    
+    updateProfile({
+      ...currentProfile,
+      favorites: updatedFavorites
+    });
+    
+    setIsFavorite(!isFavorite);
+  };
   
   if (!channel) {
     return (
       <div className="min-h-screen bg-steadystream-black flex items-center justify-center">
-        <div className="text-steadystream-gold">Loading channel...</div>
+        <div className="text-steadystream-gold">Loading...</div>
       </div>
     );
   }
@@ -249,118 +231,112 @@ const PlayerPage: React.FC = () => {
     <div className="min-h-screen bg-steadystream-black flex flex-col">
       {/* Video Player */}
       <div 
-        ref={playerContainerRef} 
-        className="relative flex-1 bg-black"
-        onClick={togglePlayPause}
+        ref={containerRef}
+        className="relative w-full flex-1 bg-black flex items-center justify-center"
       >
         <video
           ref={videoRef}
           src={channel.url}
-          className="w-full h-full object-contain"
+          className="max-h-full max-w-full"
+          controls={false}
           autoPlay
-          playsInline
-          onError={handleError}
+          muted={isMuted}
         />
         
-        {/* Error message */}
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
-            <div className="text-center p-4">
-              <p className="text-steadystream-gold-light mb-4">{error}</p>
-              <Button 
-                onClick={goBack}
-                className="bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-              >
-                Return to Channels
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Program info overlay */}
-        {currentProgram && controlsVisible && (
-          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-            <div className="text-steadystream-gold opacity-90 text-sm">
-              Now Playing:
-              <span className="font-medium text-white ml-2">{currentProgram.title}</span>
-            </div>
-            <div className="text-xs text-steadystream-secondary mt-1">
-              {new Date(currentProgram.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-              {new Date(currentProgram.stop).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {currentProgram.category && <span className="ml-2">• {currentProgram.category}</span>}
-            </div>
-          </div>
-        )}
-        
-        {/* Video Controls */}
-        <div 
-          className={`absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/50 transition-opacity duration-300 ${
-            controlsVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          {/* Top Bar */}
-          <div className="p-4 flex items-center">
+        {/* Control Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50 opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col">
+          {/* Back button and channel name */}
+          <div className="p-4">
             <Button 
               variant="ghost" 
-              size="icon"
-              onClick={goBack}
+              size="sm" 
               className="text-white hover:bg-black/30"
+              onClick={() => navigate('/channels')}
             >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            
-            <div className="ml-2">
-              <h1 className="text-white text-lg font-medium">{channel.name}</h1>
-            </div>
-            
-            <div className="flex-1"></div>
-            
-            {/* Favorite button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleFavorite}
-              className={`text-white hover:bg-black/30 transition-colors duration-300 ${
-                isFavorite ? 'text-steadystream-gold' : ''
-              }`}
-            >
-              <Heart className={`h-6 w-6 ${isFavorite ? 'fill-steadystream-gold' : ''}`} />
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Channels
             </Button>
           </div>
           
-          {/* Bottom Controls */}
-          <div className="p-4 flex items-center gap-2">
+          {/* Center play/pause button */}
+          <div className="flex-1 flex items-center justify-center">
             <Button 
+              size="lg" 
               variant="ghost" 
-              size="icon" 
-              onClick={togglePlayPause}
-              className="text-white hover:bg-black/30"
+              className="rounded-full bg-black/30 h-20 w-20 hover:bg-black/50"
+              onClick={handlePlayPause}
             >
-              {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+              {isPlaying ? 
+                <Pause className="h-10 w-10 text-white" /> : 
+                <Play className="h-10 w-10 text-white" />
+              }
             </Button>
+          </div>
+          
+          {/* Bottom controls */}
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:bg-black/30"
+                onClick={handleMuteToggle}
+              >
+                {isMuted ? 
+                  <VolumeX className="h-5 w-5" /> : 
+                  <Volume2 className="h-5 w-5" />
+                }
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`text-white hover:bg-black/30 ${isFavorite ? 'text-steadystream-gold' : ''}`}
+                onClick={handleFavoriteToggle}
+              >
+                <Heart 
+                  className="h-5 w-5" 
+                  fill={isFavorite ? 'currentColor' : 'none'} 
+                />
+              </Button>
+            </div>
             
             <Button 
               variant="ghost" 
-              size="icon"
-              onClick={toggleMute}
+              size="sm" 
               className="text-white hover:bg-black/30"
+              onClick={handleFullscreenToggle}
             >
-              {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
-            </Button>
-            
-            <div className="flex-1" />
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleFullscreen}
-              className="text-white hover:bg-black/30"
-            >
-              {isFullscreen ? <Minimize className="h-6 w-6" /> : <Maximize className="h-6 w-6" />}
+              <Maximize className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </div>
+      
+      {/* Program Info */}
+      {currentProgram && (
+        <Card className="bg-black border-t border-steadystream-gold/20 rounded-none">
+          <div className="p-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-steadystream-gold-light font-medium text-lg">
+                {currentProgram.title}
+              </h3>
+              <p className="text-steadystream-secondary text-sm">
+                {new Date(currentProgram.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {' - '}
+                {new Date(currentProgram.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {currentProgram.category ? ` • ${currentProgram.category}` : ''}
+              </p>
+            </div>
+            <div className="text-right">
+              <h4 className="text-steadystream-gold-light">{channel.name}</h4>
+              {channel.group && (
+                <p className="text-steadystream-secondary text-sm">{channel.group}</p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

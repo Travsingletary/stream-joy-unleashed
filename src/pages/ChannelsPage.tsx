@@ -2,196 +2,317 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
-import { Channel, Group } from '../types/playlist';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Tv, Search, List } from 'lucide-react';
-import { getPlaylistFromStorage } from '../services/playlistService';
+import { Channel } from '../types/playlist';
+import { useProfiles } from '../hooks/useProfiles';
+import { RecommendationCarousel } from '../components/recommendations/RecommendationCarousel';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Play, Search, Heart, ChevronRight, ArrowLeft } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ChannelsPage: React.FC = () => {
-  const navigate = useNavigate();
   const { playlist, isLoading } = usePlaylist();
-  const [search, setSearch] = useState('');
+  const { currentProfile, profiles, switchProfile } = useProfiles();
+  const navigate = useNavigate();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [filterMode, setFilterMode] = useState<'all' | 'favorites'>('all');
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   
-  // Check if playlist is loaded
   useEffect(() => {
-    // If there's no playlist, try loading from storage
-    if (!playlist && !isLoading) {
-      const storedPlaylist = getPlaylistFromStorage();
+    if (playlist && playlist.channels) {
+      // Extract unique categories
+      const uniqueCategories = Array.from(
+        new Set(
+          playlist.channels
+            .map(channel => channel.group)
+            .filter(Boolean)
+        )
+      ).sort() as string[];
       
-      // If still no playlist, redirect to login
-      if (!storedPlaylist) {
-        navigate('/login');
-      }
+      setCategories(uniqueCategories);
     }
-  }, [playlist, isLoading, navigate]);
+  }, [playlist]);
   
-  // Filter channels based on search
   useEffect(() => {
-    if (!playlist) return;
-    
-    if (!search) {
-      setFilteredChannels(playlist.channels);
+    if (!playlist || !playlist.channels) {
+      setFilteredChannels([]);
       return;
     }
     
-    const searchLower = search.toLowerCase();
-    const filtered = playlist.channels.filter(channel => 
-      channel.name.toLowerCase().includes(searchLower)
-    );
+    let result = [...playlist.channels];
     
-    setFilteredChannels(filtered);
-  }, [search, playlist]);
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(channel => 
+        channel.name.toLowerCase().includes(query) ||
+        (channel.group && channel.group.toLowerCase().includes(query))
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory) {
+      result = result.filter(channel => channel.group === selectedCategory);
+    }
+    
+    // Filter by favorites
+    if (filterMode === 'favorites' && currentProfile) {
+      result = result.filter(channel => 
+        currentProfile.favorites.includes(channel.id)
+      );
+    }
+    
+    setFilteredChannels(result);
+  }, [playlist, searchQuery, selectedCategory, filterMode, currentProfile]);
   
-  // Navigate to player
-  const openChannel = (channel: Channel) => {
-    navigate(`/player/${channel.id}`);
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
   
-  if (!playlist) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-steadystream-black flex items-center justify-center">
-        <Card className="p-4 bg-black border-steadystream-gold/20 text-steadystream-gold">
-          Loading channels...
-        </Card>
+        <div className="text-steadystream-gold">Loading channels...</div>
+      </div>
+    );
+  }
+  
+  if (!playlist || !playlist.channels || playlist.channels.length === 0) {
+    return (
+      <div className="min-h-screen bg-steadystream-black flex flex-col items-center justify-center p-4">
+        <h2 className="text-2xl text-steadystream-gold mb-4">No Channels Found</h2>
+        <p className="text-steadystream-secondary mb-6">
+          Please connect to a service to view available channels.
+        </p>
+        <Button 
+          onClick={() => navigate('/login')} 
+          className="bg-gold-gradient hover:bg-gold-gradient-hover text-black"
+        >
+          Connect a Service
+        </Button>
       </div>
     );
   }
   
   return (
     <div className="min-h-screen bg-steadystream-black">
-      <div className="container mx-auto px-4 py-8">
-        <header className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-steadystream-gold">Channels</h1>
-            <p className="text-steadystream-secondary text-sm">
-              {playlist.channels.length} channels available
-            </p>
-          </div>
+      {/* Header with profile selector */}
+      <header className="p-4 border-b border-steadystream-gold/20 sticky top-0 bg-steadystream-black z-10">
+        <div className="container mx-auto flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/10"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Home
+          </Button>
           
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="border-steadystream-gold/30 text-steadystream-gold"
-              onClick={() => navigate('/epg')}
-            >
-              <List className="mr-2 h-4 w-4" />
-              EPG
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="border-steadystream-gold/30 text-steadystream-gold"
-              onClick={() => navigate('/login')}
-            >
-              Change Source
-            </Button>
-          </div>
-        </header>
+          <h1 className="text-xl font-bold text-steadystream-gold">Channels</h1>
+          
+          {currentProfile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center gap-2 hover:bg-steadystream-gold/10 border border-steadystream-gold/20 rounded-full pr-2"
+                >
+                  <Avatar className="h-7 w-7">
+                    {currentProfile.avatar ? (
+                      <AvatarImage src={currentProfile.avatar} alt={currentProfile.name} />
+                    ) : (
+                      <AvatarFallback className="bg-steadystream-gold/20 text-steadystream-gold text-xs">
+                        {getInitials(currentProfile.name)}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <span className="text-steadystream-gold-light text-sm">{currentProfile.name}</span>
+                  <ChevronRight className="h-4 w-4 text-steadystream-gold-light" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-black border-steadystream-gold/20">
+                <DropdownMenuLabel className="text-steadystream-gold-light">Profiles</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-steadystream-gold/10" />
+                {profiles.map(profile => (
+                  <DropdownMenuItem 
+                    key={profile.id}
+                    className={`flex items-center gap-2 ${profile.id === currentProfile.id ? 'bg-steadystream-gold/10' : ''}`}
+                    onClick={() => switchProfile(profile.id)}
+                  >
+                    <Avatar className="h-6 w-6">
+                      {profile.avatar ? (
+                        <AvatarImage src={profile.avatar} alt={profile.name} />
+                      ) : (
+                        <AvatarFallback className="bg-steadystream-gold/20 text-steadystream-gold text-xs">
+                          {getInitials(profile.name)}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span className="text-steadystream-gold-light">{profile.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator className="bg-steadystream-gold/10" />
+                <DropdownMenuItem 
+                  className="text-steadystream-gold" 
+                  onClick={() => navigate('/profiles')}
+                >
+                  Manage Profiles
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </header>
+      
+      <div className="container mx-auto p-4">
+        {/* Recommendations */}
+        {currentProfile && playlist.channels && (
+          <RecommendationCarousel channels={playlist.channels} />
+        )}
         
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-steadystream-gold/50" />
-            <Input
-              className="pl-10 bg-steadystream-black border-steadystream-gold/30 text-white"
-              placeholder="Search channels..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Filters */}
+        <div className="my-4 space-y-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-steadystream-secondary h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search channels..."
+                className="pl-8 bg-steadystream-black border-steadystream-gold/30 text-white"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger className="w-full md:w-[180px] bg-steadystream-black border-steadystream-gold/30 text-white">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent className="bg-black border-steadystream-gold/20">
+                <SelectItem value="">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex rounded-md overflow-hidden border border-steadystream-gold/30">
+              <Button
+                variant={filterMode === 'all' ? 'default' : 'outline'}
+                className={filterMode === 'all' 
+                  ? 'bg-gold-gradient text-black rounded-none flex-1' 
+                  : 'bg-transparent text-steadystream-secondary hover:bg-steadystream-gold/10 rounded-none border-0 flex-1'
+                }
+                onClick={() => setFilterMode('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={filterMode === 'favorites' ? 'default' : 'outline'}
+                className={filterMode === 'favorites' 
+                  ? 'bg-gold-gradient text-black rounded-none flex-1' 
+                  : 'bg-transparent text-steadystream-secondary hover:bg-steadystream-gold/10 rounded-none border-0 flex-1'
+                }
+                onClick={() => setFilterMode('favorites')}
+              >
+                <Heart className="h-4 w-4 mr-1" /> Favorites
+              </Button>
+            </div>
           </div>
         </div>
         
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-6 bg-steadystream-black border border-steadystream-gold/30 overflow-x-auto flex flex-nowrap pb-1 steadystream-scrollbar">
-            <TabsTrigger value="all" className="whitespace-nowrap">
-              All Channels
-            </TabsTrigger>
-            
-            {playlist.groups.map(group => (
-              <TabsTrigger key={group.id} value={group.id} className="whitespace-nowrap">
-                {group.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          
-          <TabsContent value="all" className="mt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {filteredChannels.map(channel => (
-                <ChannelCard 
-                  key={channel.id} 
-                  channel={channel} 
-                  onClick={() => openChannel(channel)}
-                />
-              ))}
-            </div>
-            
-            {filteredChannels.length === 0 && (
-              <div className="text-center py-12 text-steadystream-secondary">
-                No channels found matching your search.
-              </div>
-            )}
-          </TabsContent>
-          
-          {playlist.groups.map(group => (
-            <TabsContent key={group.id} value={group.id} className="mt-0">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {group.channels
-                  .filter(channel => channel.name.toLowerCase().includes(search.toLowerCase()))
-                  .map(channel => (
-                    <ChannelCard 
-                      key={channel.id} 
-                      channel={channel} 
-                      onClick={() => openChannel(channel)}
-                    />
-                  ))
-                }
-              </div>
+        {/* Channel Grid */}
+        {filteredChannels.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredChannels.map((channel) => {
+              const isFavorite = currentProfile?.favorites.includes(channel.id);
               
-              {group.channels.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).length === 0 && (
-                <div className="text-center py-12 text-steadystream-secondary">
-                  No channels found in this group matching your search.
-                </div>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-    </div>
-  );
-};
-
-interface ChannelCardProps {
-  channel: Channel;
-  onClick: () => void;
-}
-
-const ChannelCard: React.FC<ChannelCardProps> = ({ channel, onClick }) => {
-  return (
-    <div 
-      className="bg-black border border-steadystream-gold/20 rounded-lg overflow-hidden cursor-pointer hover:border-steadystream-gold/50 transition-all"
-      onClick={onClick}
-    >
-      <div className="aspect-video flex items-center justify-center bg-steadystream-black/50 overflow-hidden">
-        {channel.logo ? (
-          <img 
-            src={channel.logo} 
-            alt={channel.name} 
-            className="w-full h-full object-contain p-2"
-            onError={(e) => (e.currentTarget.style.display = 'none')}
-          />
+              return (
+                <Card 
+                  key={channel.id} 
+                  className="bg-black border-steadystream-gold/20 hover:gold-glow transition-shadow duration-300"
+                >
+                  <CardHeader className="pb-0">
+                    {channel.group && (
+                      <p className="text-xs text-steadystream-secondary">{channel.group}</p>
+                    )}
+                    <CardTitle className="text-steadystream-gold-light truncate text-lg">
+                      {channel.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-center p-4">
+                    <div className="w-full aspect-video bg-steadystream-black/50 rounded flex items-center justify-center overflow-hidden">
+                      {channel.logo ? (
+                        <img
+                          src={channel.logo}
+                          alt={channel.name}
+                          className="max-h-full max-w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
+                        />
+                      ) : (
+                        <div className="text-steadystream-gold/30 text-sm">No Logo</div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <Button 
+                      className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
+                      onClick={() => navigate(`/player/${channel.id}`)}
+                    >
+                      <Play className="h-4 w-4 mr-1" /> Watch
+                    </Button>
+                  </CardFooter>
+                  {isFavorite && (
+                    <div className="absolute top-2 right-2">
+                      <Heart className="h-4 w-4 text-steadystream-gold fill-steadystream-gold" />
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Tv className="h-10 w-10 text-steadystream-gold/70" />
+          <div className="text-center py-10">
+            <h3 className="text-steadystream-gold-light text-lg">No channels found</h3>
+            <p className="text-steadystream-secondary mt-2">
+              {filterMode === 'favorites' 
+                ? "You don't have any favorites yet. Add some channels to your favorites!" 
+                : "No channels match your search criteria. Try adjusting your filters."}
+            </p>
           </div>
         )}
-      </div>
-      <div className="p-3">
-        <h3 className="text-steadystream-gold font-medium text-sm truncate">
-          {channel.name}
-        </h3>
       </div>
     </div>
   );
