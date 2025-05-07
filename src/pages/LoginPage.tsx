@@ -7,60 +7,102 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { getXtreamCredentials, getM3UUrl } from '../services/playlistService';
-import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { toast } from '../hooks/use-toast';
+import { InfoIcon } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { loadM3U, loadXtream, isLoading } = usePlaylist();
+  const [accessCode, setAccessCode] = useState('');
   
-  // Initialize with saved values if available
-  const savedXtream = getXtreamCredentials();
-  const savedM3U = getM3UUrl();
-  
-  // Xtream credentials state
-  const [xtreamCreds, setXtreamCreds] = useState<XtreamCredentials>({
-    username: savedXtream?.username || '',
-    password: savedXtream?.password || '',
-    url: savedXtream?.url || ''
-  });
-  
-  // M3U URL state
-  const [m3uUrl, setM3UUrl] = useState<string>(savedM3U || '');
-  
-  // Handle Xtream login
-  const handleXtreamLogin = async (e: React.FormEvent) => {
+  const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      await loadXtream(xtreamCreds);
-      navigate('/channels');
-    } catch (error) {
-      console.error('Xtream login error:', error);
-      // Toast notification is handled in the hook
+    if (!accessCode.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Input required",
+        description: "Please enter your access code or service link",
+      });
+      return;
     }
-  };
-  
-  // Handle M3U loading
-  const handleM3ULoad = async (e: React.FormEvent) => {
-    e.preventDefault();
     
     try {
-      await loadM3U(m3uUrl);
-      navigate('/channels');
+      // Check if it's an Xtream Codes URL
+      if (accessCode.includes('get.php') || accessCode.includes('username=') || accessCode.includes('password=')) {
+        // Parse Xtream URL to get credentials
+        const url = new URL(accessCode);
+        const username = url.searchParams.get('username') || '';
+        const password = url.searchParams.get('password') || '';
+        const serverUrl = accessCode.split('/c/')[0];
+        
+        if (!username || !password || !serverUrl) {
+          throw new Error('Invalid Xtream URL format');
+        }
+        
+        const credentials: XtreamCredentials = {
+          username,
+          password,
+          url: serverUrl
+        };
+        
+        await loadXtream(credentials);
+        navigate('/channels');
+      }
+      // Check if it's an M3U URL
+      else if (accessCode.toLowerCase().endsWith('.m3u') || accessCode.toLowerCase().endsWith('.m3u8')) {
+        await loadM3U(accessCode);
+        navigate('/channels');
+      }
+      // Treat as a DNS code and resolve via API
+      else if (/^[a-zA-Z0-9]{5,12}$/.test(accessCode)) {
+        // Simulate API call for now
+        toast({
+          title: "Resolving access code...",
+          description: "Please wait while we connect to your service",
+        });
+        
+        // Mock API call - in a real app, this would be a fetch to '/api/resolve-code'
+        setTimeout(async () => {
+          try {
+            // Mock response - in production, this would come from the API
+            const mockResponse = {
+              type: 'm3u',
+              url: 'https://example.com/playlist.m3u'
+            };
+            
+            if (mockResponse.type === 'm3u') {
+              await loadM3U(mockResponse.url);
+              navigate('/channels');
+            } else if (mockResponse.type === 'xtream') {
+              const credentials: XtreamCredentials = {
+                username: 'demo',
+                password: 'demo',
+                url: 'https://example.com'
+              };
+              await loadXtream(credentials);
+              navigate('/channels');
+            }
+          } catch (error) {
+            toast({
+              variant: "destructive",
+              title: "Connection failed",
+              description: "Could not resolve your access code. Please check and try again.",
+            });
+          }
+        }, 2000);
+      } else {
+        throw new Error('Unrecognized format');
+      }
     } catch (error) {
-      console.error('M3U load error:', error);
-      // Toast notification is handled in the hook
+      console.error('Connection error:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection failed",
+        description: "Please check your access code or service link and try again.",
+      });
     }
-  };
-  
-  // Update Xtream form fields
-  const updateXtreamField = (field: keyof XtreamCredentials, value: string) => {
-    setXtreamCreds(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
   
   return (
@@ -68,111 +110,80 @@ const LoginPage: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-steadystream-gold mb-2">SteadyStream</h1>
-          <p className="text-steadystream-secondary">Sign in to access your channels</p>
+          <p className="text-steadystream-secondary">Connect to start watching</p>
         </div>
         
-        <Tabs defaultValue={savedM3U ? "m3u" : "xtream"} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="xtream">Xtream Login</TabsTrigger>
-            <TabsTrigger value="m3u">M3U URL</TabsTrigger>
-          </TabsList>
-          
-          {/* Xtream Login Tab */}
-          <TabsContent value="xtream">
-            <Card className="bg-black border-steadystream-gold/20">
-              <CardHeader>
-                <CardTitle className="text-steadystream-gold-light">Xtream Login</CardTitle>
-                <CardDescription className="text-steadystream-secondary">
-                  Enter your Xtream provider credentials
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleXtreamLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="xtream-url" className="text-steadystream-gold-light">Server URL</Label>
-                    <Input 
-                      id="xtream-url"
-                      type="url" 
-                      placeholder="http://example.com:port"
-                      className="bg-steadystream-black border-steadystream-gold/30 text-white"
-                      value={xtreamCreds.url}
-                      onChange={(e) => updateXtreamField('url', e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="xtream-username" className="text-steadystream-gold-light">Username</Label>
-                    <Input 
-                      id="xtream-username"
-                      type="text" 
-                      className="bg-steadystream-black border-steadystream-gold/30 text-white"
-                      value={xtreamCreds.username}
-                      onChange={(e) => updateXtreamField('username', e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="xtream-password" className="text-steadystream-gold-light">Password</Label>
-                    <Input 
-                      id="xtream-password"
-                      type="password" 
-                      className="bg-steadystream-black border-steadystream-gold/30 text-white"
-                      value={xtreamCreds.password}
-                      onChange={(e) => updateXtreamField('password', e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Connecting...' : 'Connect'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* M3U URL Tab */}
-          <TabsContent value="m3u">
-            <Card className="bg-black border-steadystream-gold/20">
-              <CardHeader>
-                <CardTitle className="text-steadystream-gold-light">M3U Playlist</CardTitle>
-                <CardDescription className="text-steadystream-secondary">
-                  Enter the URL of your M3U playlist
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleM3ULoad} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="m3u-url" className="text-steadystream-gold-light">M3U URL</Label>
-                    <Input 
-                      id="m3u-url"
-                      type="url" 
-                      placeholder="http://example.com/playlist.m3u"
-                      className="bg-steadystream-black border-steadystream-gold/30 text-white"
-                      value={m3uUrl}
-                      onChange={(e) => setM3UUrl(e.target.value)}
-                      required
-                    />
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Loading...' : 'Load Playlist'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <Card className="bg-black border-steadystream-gold/20">
+          <CardHeader>
+            <CardTitle className="text-steadystream-gold-light">Connect to your service</CardTitle>
+            <CardDescription className="text-steadystream-secondary">
+              Enter your access code or service link to continue
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleConnect} className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="access-code" className="text-steadystream-gold-light">
+                    Enter your access code or service link
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full text-steadystream-secondary hover:text-steadystream-gold hover:bg-transparent"
+                      >
+                        <InfoIcon className="h-4 w-4" />
+                        <span className="sr-only">Help</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-black border-steadystream-gold/20 text-white">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-steadystream-gold-light">What to enter?</h4>
+                        <p className="text-sm text-steadystream-secondary">
+                          You can enter a code from your provider or paste a service link you were given.
+                        </p>
+                        <p className="text-sm text-steadystream-secondary">
+                          Examples:
+                          <br />• Short code: skytv42
+                          <br />• M3U link: http://example.com/playlist.m3u
+                          <br />• Xtream service link
+                        </p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Input 
+                  id="access-code"
+                  type="text" 
+                  placeholder="Enter code or paste link"
+                  className="bg-steadystream-black border-steadystream-gold/30 text-white"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Connecting...' : 'Connect'}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Button 
+              variant="link" 
+              className="text-steadystream-secondary hover:text-steadystream-gold"
+              onClick={() => navigate('/')}
+            >
+              Back to home
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );
