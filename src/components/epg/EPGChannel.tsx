@@ -1,10 +1,17 @@
 
 import React from 'react';
-import { EPGChannel, Program } from '../../types/epg';
+import { Program } from '../../types/epg';
 import { cn } from '@/lib/utils';
 
+interface EPGChannelData {
+  id: string;
+  name: string;
+  icon?: string;
+  programs: Program[];
+}
+
 interface EPGChannelProps {
-  channel: EPGChannel;
+  channel: EPGChannelData;
   timeStart: number;
   pixelsPerMinute: number;
   onChannelSelect: (channelId: string) => void;

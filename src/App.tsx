@@ -6,7 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import EPGPage from "./pages/EPGPage"; // Import the EPG page
+import EPGPage from "./pages/EPGPage";
+import LoginPage from "./pages/LoginPage";
+import ChannelsPage from "./pages/ChannelsPage";
+import PlayerPage from "./pages/PlayerPage";
 
 const queryClient = new QueryClient();
 
@@ -18,8 +21,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/epg" element={<EPGPage />} /> {/* Add EPG route */}
-          <Route path="/channels" element={<EPGPage />} /> {/* Temporarily mapping /channels to EPG */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/channels" element={<ChannelsPage />} />
+          <Route path="/player/:channelId" element={<PlayerPage />} />
+          <Route path="/epg" element={<EPGPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
