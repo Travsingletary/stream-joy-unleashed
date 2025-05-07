@@ -11,7 +11,9 @@ import LoginPage from "./pages/LoginPage";
 import ProfilesPage from "./pages/ProfilesPage";
 import ChannelsPage from "./pages/ChannelsPage";
 import PlayerPage from "./pages/PlayerPage";
+import AdminNotifyPage from "./pages/AdminNotifyPage";
 import { ProfileProvider } from "./hooks/useProfiles";
+import { NotificationPrompt } from "./components/notification/NotificationPrompt";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +21,7 @@ const queryClient = new QueryClient();
 const AppWithProviders = () => {
   return (
     <ProfileProvider>
+      <NotificationPrompt />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<LoginPage />} />
@@ -26,6 +29,7 @@ const AppWithProviders = () => {
         <Route path="/channels" element={<ChannelsPage />} />
         <Route path="/player/:channelId" element={<PlayerPage />} />
         <Route path="/epg" element={<EPGPage />} />
+        <Route path="/admin-notify" element={<AdminNotifyPage />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

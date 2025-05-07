@@ -1,14 +1,17 @@
-
 export interface Program {
   id: string;
   title: string;
   description?: string;
-  start: number; // Unix timestamp
-  stop: number; // Unix timestamp
+  start: number; // Unix timestamp of program start
+  stop: number; // Unix timestamp of program end (renaming to match the fix needed)
+  end?: number; // Adding this for backward compatibility with existing code
   channelId: string;
   category?: string;
+  poster?: string;
   rating?: string;
-  icon?: string;
+  episodeTitle?: string;
+  episodeNumber?: number;
+  seasonNumber?: number;
 }
 
 export interface EPGChannel {

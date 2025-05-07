@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DialogFooter } from "@/components/ui/dialog";
 import { User, Upload } from 'lucide-react';
+import { NotificationSettings } from '../notification/NotificationSettings';
 
 interface ProfileEditFormProps {
   profile?: Profile;
@@ -65,7 +66,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ profile, onClo
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="space-y-4 py-2">
+      <div className="space-y-6 py-2">
         <div className="flex flex-col items-center space-y-2">
           <Avatar className="w-24 h-24 border-2 border-steadystream-gold/30">
             {avatar ? (
@@ -108,6 +109,12 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ profile, onClo
           />
           {nameError && <p className="text-red-500 text-sm">{nameError}</p>}
         </div>
+        
+        {isEditing && (
+          <div className="pt-2">
+            <NotificationSettings />
+          </div>
+        )}
       </div>
       
       <DialogFooter className="mt-6">
