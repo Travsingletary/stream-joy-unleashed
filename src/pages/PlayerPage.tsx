@@ -3,13 +3,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
 import { Button } from '../components/ui/button';
-import { Play, Pause, Maximize, Minimize, ChevronLeft, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Maximize, Minimize, ChevronLeft, Volume2, VolumeX, Heart } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { Channel } from '../types/playlist';
+import { useEPG } from '../hooks/useEPG';
+import { Program } from '../types/epg';
 
 const PlayerPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
-  const { getChannel } = usePlaylist();
+  const { getChannel, playlist } = usePlaylist();
   const navigate = useNavigate();
   
   // State
@@ -19,11 +21,19 @@ const PlayerPage: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [currentProgram, setCurrentProgram] = useState<Program | null>(null);
   
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
+  
+  // Get EPG data for current program information
+  const { epgData } = useEPG({
+    autoLoad: true,
+    channels: playlist?.channels || []
+  });
   
   // Effects
   useEffect(() => {
@@ -44,7 +54,78 @@ const PlayerPage: React.FC = () => {
     }
     
     setChannel(channelData);
-  }, [channelId, getChannel, navigate]);
+    
+    // Check if this channel is in favorites
+    const storedFavorites = localStorage.getItem('steadystream_favorite_channels');
+    const favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+    setIsFavorite(favorites.includes(channelId));
+    
+    // Find current program from EPG data
+    updateCurrentProgram(channelData);
+  }, [channelId, getChannel, navigate, epgData]);
+  
+  // Update current program periodically
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (channel) {
+        updateCurrentProgram(channel);
+      }
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [channel, epgData]);
+  
+  // Function to find the current program for this channel
+  const updateCurrentProgram = (channel: Channel) => {
+    if (!epgData) return;
+    
+    const now = Date.now();
+    const channelEpg = epgData.channels.find(epgChannel => {
+      // Try matching by epg_channel_id if available
+      if (channel.epg_channel_id && epgChannel.id === channel.epg_channel_id) {
+        return true;
+      }
+      
+      // Try matching by name (case-insensitive)
+      const normalizedChannelName = channel.name.toLowerCase().replace(/\s+/g, '');
+      const normalizedEpgName = epgChannel.name.toLowerCase().replace(/\s+/g, '');
+      
+      return normalizedChannelName === normalizedEpgName;
+    });
+    
+    if (channelEpg) {
+      const program = channelEpg.programs.find(p => p.start <= now && p.stop > now);
+      setCurrentProgram(program || null);
+    }
+  };
+  
+  // Toggle favorite status
+  const toggleFavorite = () => {
+    if (!channelId) return;
+    
+    const storedFavorites = localStorage.getItem('steadystream_favorite_channels');
+    const favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+    
+    let newFavorites: string[];
+    if (isFavorite) {
+      // Remove from favorites
+      newFavorites = favorites.filter((id: string) => id !== channelId);
+      toast({
+        title: "Removed from favorites",
+        description: `${channel?.name || 'Channel'} removed from your favorites`,
+      });
+    } else {
+      // Add to favorites
+      newFavorites = [...favorites, channelId];
+      toast({
+        title: "Added to favorites",
+        description: `${channel?.name || 'Channel'} added to your favorites`,
+      });
+    }
+    
+    localStorage.setItem('steadystream_favorite_channels', JSON.stringify(newFavorites));
+    setIsFavorite(!isFavorite);
+  };
   
   // Auto-hide controls after inactivity
   useEffect(() => {
@@ -150,6 +231,13 @@ const PlayerPage: React.FC = () => {
     navigate('/channels');
   };
   
+  // Store last watched channel
+  useEffect(() => {
+    if (channel) {
+      localStorage.setItem('steadystream_last_watched', channelId || '');
+    }
+  }, [channel, channelId]);
+  
   if (!channel) {
     return (
       <div className="min-h-screen bg-steadystream-black flex items-center justify-center">
@@ -190,6 +278,21 @@ const PlayerPage: React.FC = () => {
           </div>
         )}
         
+        {/* Program info overlay */}
+        {currentProgram && controlsVisible && (
+          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+            <div className="text-steadystream-gold opacity-90 text-sm">
+              Now Playing:
+              <span className="font-medium text-white ml-2">{currentProgram.title}</span>
+            </div>
+            <div className="text-xs text-steadystream-secondary mt-1">
+              {new Date(currentProgram.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
+              {new Date(currentProgram.stop).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {currentProgram.category && <span className="ml-2">• {currentProgram.category}</span>}
+            </div>
+          </div>
+        )}
+        
         {/* Video Controls */}
         <div 
           className={`absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/50 transition-opacity duration-300 ${
@@ -210,6 +313,20 @@ const PlayerPage: React.FC = () => {
             <div className="ml-2">
               <h1 className="text-white text-lg font-medium">{channel.name}</h1>
             </div>
+            
+            <div className="flex-1"></div>
+            
+            {/* Favorite button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleFavorite}
+              className={`text-white hover:bg-black/30 transition-colors duration-300 ${
+                isFavorite ? 'text-steadystream-gold' : ''
+              }`}
+            >
+              <Heart className={`h-6 w-6 ${isFavorite ? 'fill-steadystream-gold' : ''}`} />
+            </Button>
           </div>
           
           {/* Bottom Controls */}

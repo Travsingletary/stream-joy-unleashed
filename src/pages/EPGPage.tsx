@@ -8,6 +8,8 @@ import { Button } from '../components/ui/button';
 import { Program } from '../types/epg';
 import { getStoredEPGUrl } from '../services/epgService';
 import { Progress } from '../components/ui/progress';
+import { FilterIcon, ListVideo, Clock } from 'lucide-react';
+import { usePlaylist } from '../hooks/usePlaylist';
 
 // Mock data for testing - in real implementation, this would come from your channel context
 const MOCK_CHANNELS = [
@@ -26,6 +28,17 @@ const MOCK_CHANNELS = [
 const EPGPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'now' | 'favorites'>('all');
+  const { playlist } = usePlaylist();
+
+  // Get the actual channels from the playlist if available
+  const channels = playlist?.channels || MOCK_CHANNELS;
+  
+  // Retrieve favorite channels from localStorage
+  const [favoriteChannels, setFavoriteChannels] = useState<string[]>(() => {
+    const storedFavorites = localStorage.getItem('steadystream_favorite_channels');
+    return storedFavorites ? JSON.parse(storedFavorites) : [];
+  });
   
   const {
     epgData,
@@ -35,8 +48,42 @@ const EPGPage: React.FC = () => {
     loadEPGData
   } = useEPG({
     autoLoad: true,
-    channels: MOCK_CHANNELS // Replace with your actual channels
+    channels: channels
   });
+  
+  // Filter EPG data based on the selected filter
+  const filteredEpgData = React.useMemo(() => {
+    if (!epgData) return null;
+    
+    if (filterType === 'all') {
+      return epgData;
+    }
+    
+    if (filterType === 'now') {
+      const now = Date.now();
+      const channelsWithCurrentPrograms = epgData.channels.filter(channel => 
+        channel.programs.some(program => program.start <= now && program.stop > now)
+      );
+      
+      return {
+        ...epgData,
+        channels: channelsWithCurrentPrograms
+      };
+    }
+    
+    if (filterType === 'favorites') {
+      const favoriteEpgChannels = epgData.channels.filter(channel => 
+        favoriteChannels.includes(channel.id)
+      );
+      
+      return {
+        ...epgData,
+        channels: favoriteEpgChannels
+      };
+    }
+    
+    return epgData;
+  }, [epgData, filterType, favoriteChannels]);
   
   const handleChannelSelect = (channelId: string) => {
     // In a real implementation, navigate to the channel player or show details
@@ -73,6 +120,43 @@ const EPGPage: React.FC = () => {
             isLoading={isLoading}
           />
         </div>
+
+        {/* Filter Options */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button
+            variant={filterType === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilterType('all')}
+            className={filterType === 'all' ? 
+              'bg-steadystream-gold text-black hover:bg-steadystream-gold-light' : 
+              'border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/10'
+            }
+          >
+            <ListVideo className="mr-2 h-4 w-4" />
+            All Channels
+          </Button>
+          <Button
+            variant={filterType === 'now' ? 'default' : 'outline'}
+            onClick={() => setFilterType('now')}
+            className={filterType === 'now' ? 
+              'bg-steadystream-gold text-black hover:bg-steadystream-gold-light' : 
+              'border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/10'
+            }
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Now Playing
+          </Button>
+          <Button
+            variant={filterType === 'favorites' ? 'default' : 'outline'}
+            onClick={() => setFilterType('favorites')}
+            className={filterType === 'favorites' ? 
+              'bg-steadystream-gold text-black hover:bg-steadystream-gold-light' : 
+              'border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/10'
+            }
+          >
+            <FilterIcon className="mr-2 h-4 w-4" />
+            Favorites Only
+          </Button>
+        </div>
         
         {/* Loading state */}
         {isLoading && (
@@ -90,11 +174,19 @@ const EPGPage: React.FC = () => {
           </div>
         )}
         
+        {/* No favorites message */}
+        {filterType === 'favorites' && favoriteChannels.length === 0 && (
+          <div className="p-6 border border-steadystream-gold/30 bg-steadystream-gold/5 rounded-md text-steadystream-gold mb-6 text-center">
+            <p className="font-medium">No favorite channels yet</p>
+            <p className="text-sm opacity-80 mt-2">Add favorites by clicking the star icon when watching a channel</p>
+          </div>
+        )}
+        
         {/* EPG Grid */}
-        {epgData && !isLoading && (
+        {filteredEpgData && !isLoading && (
           <div className="h-[70vh]">
             <EPGGrid 
-              epgData={epgData}
+              epgData={filteredEpgData}
               onChannelSelect={handleChannelSelect}
               onProgramSelect={handleProgramSelect}
               className="h-full"
