@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -12,10 +13,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em rgba(212, 175, 55, 0.7));
 }
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.logo.steadystream:hover {
+  filter: drop-shadow(0 0 2em rgba(205, 127, 50, 0.7));
 }
 
 @keyframes logo-spin {
@@ -38,5 +39,43 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: #C0A080;
+}
+
+/* Steadystream Theme Specific Styles */
+.steadystream-btn {
+  background: linear-gradient(to right, #D4AF37, #B8860B);
+  color: black;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.steadystream-btn:hover {
+  background: linear-gradient(to right, #D4AF37, #CD7F32);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+.steadystream-card {
+  background-color: #000000;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.steadystream-gradient-text {
+  background: linear-gradient(to right, #D4AF37, #B8860B);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.steadystream-input {
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #D4AF37;
+}
+
+.steadystream-input:focus {
+  border-color: #CD7F32;
+  box-shadow: 0 0 0 2px rgba(205, 127, 50, 0.25);
 }

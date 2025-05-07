@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -52,6 +53,16 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				steadystream: {
+					black: '#000000',
+					gold: {
+						light: '#D4AF37',
+						DEFAULT: '#CFB53B',
+						dark: '#B8860B'
+					},
+					secondary: '#C0A080',
+					bronze: '#CD7F32',
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -84,11 +95,25 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+				shimmer: {
+					'0%': {
+						backgroundPosition: '-200% 0',
+					},
+					'100%': {
+						backgroundPosition: '200% 0',
+					},
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				shimmer: 'shimmer 1.5s infinite',
+			},
+			backgroundImage: {
+				'gold-gradient': 'linear-gradient(to bottom right, #D4AF37, #B8860B)',
+				'gold-gradient-hover': 'linear-gradient(to bottom right, #D4AF37, #C0A080)',
+				'wave-pattern': 'linear-gradient(45deg, #C0A080 25%, transparent 25%), linear-gradient(-45deg, #C0A080 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #C0A080 75%), linear-gradient(-45deg, transparent 75%, #C0A080 75%)',
 			}
 		}
 	},
