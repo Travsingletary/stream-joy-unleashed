@@ -180,7 +180,7 @@ const LoginPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center py-6">
-              <Loader2 className="h-16 w-16 text-steadystream-gold animate-spin mb-4" />
+              <div className="h-16 w-16 text-steadystream-gold animate-spin mb-4 border-4 border-current border-t-transparent rounded-full"></div>
               <p className="text-white mt-4">Connecting to your service...</p>
             </CardContent>
           </Card>
@@ -281,6 +281,19 @@ const LoginPage: React.FC = () => {
                   disabled={isLoading}
                 >
                   {isLoading ? 'Connecting...' : 'Connect'}
+                </Button>
+
+                <div className="text-center">
+                  <span className="text-xs text-steadystream-secondary">or</span>
+                </div>
+
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full border-steadystream-gold/30 text-steadystream-gold hover:bg-steadystream-gold/5"
+                  onClick={() => navigate('/import')}
+                >
+                  Manual Playlist Import
                 </Button>
               </form>
             )}

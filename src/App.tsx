@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import VerifyPurchasePage from "./pages/VerifyPurchasePage";
 import { ProfileProvider } from "./hooks/useProfiles";
 import { NotificationPrompt } from "./components/notification/NotificationPrompt";
 import PurchaseProtectedRoute from "./components/auth/PurchaseProtectedRoute";
+import ImportPage from './pages/ImportPage';
 
 const queryClient = new QueryClient();
 
@@ -27,30 +27,17 @@ const AppWithProviders = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/import" element={<ImportPage />} />
         <Route path="/verify-purchase" element={<VerifyPurchasePage />} />
         
         {/* Protected Routes */}
-        <Route path="/profiles" element={
-          <PurchaseProtectedRoute>
-            <ProfilesPage />
-          </PurchaseProtectedRoute>
-        } />
-        <Route path="/channels" element={
-          <PurchaseProtectedRoute>
-            <ChannelsPage />
-          </PurchaseProtectedRoute>
-        } />
-        <Route path="/player/:channelId" element={
-          <PurchaseProtectedRoute>
-            <PlayerPage />
-          </PurchaseProtectedRoute>
-        } />
-        <Route path="/epg" element={
-          <PurchaseProtectedRoute>
-            <EPGPage />
-          </PurchaseProtectedRoute>
-        } />
-        <Route path="/admin-notify" element={<AdminNotifyPage />} />
+        <Route element={<PurchaseProtectedRoute />}>
+          <Route path="/channels" element={<ChannelsPage />} />
+          <Route path="/player/:channelId" element={<PlayerPage />} />
+          <Route path="/epg" element={<EPGPage />} />
+          <Route path="/profiles" element={<ProfilesPage />} />
+          <Route path="/admin/notify" element={<AdminNotifyPage />} />
+        </Route>
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
@@ -59,16 +46,18 @@ const AppWithProviders = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppWithProviders />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App: React.FC = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppWithProviders />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
