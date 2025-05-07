@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlaylist } from '../hooks/usePlaylist';
@@ -6,9 +7,10 @@ import { Program } from '../types/epg';
 import { useProfiles } from '../hooks/useProfiles';
 import { Channel } from '../types/playlist';
 import { toast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Heart, Volume2, VolumeX, Maximize, Pause, Play } from 'lucide-react';
+import { useWatchHistory } from '@/hooks/useWatchHistory';
+import VideoPlayer from '@/components/player/VideoPlayer';
+import PlayerControls from '@/components/player/PlayerControls';
+import ProgramInfo from '@/components/player/ProgramInfo';
 
 const PlayerPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
@@ -22,12 +24,14 @@ const PlayerPage: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [watchStartTime, setWatchStartTime] = useState<number>(0);
   const [isFavorite, setIsFavorite] = useState(false);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Use the watch history hook
+  useWatchHistory(channel);
+  
+  // Load channel data
   useEffect(() => {
     if (!playlist || !channelId) return;
     
@@ -39,17 +43,6 @@ const PlayerPage: React.FC = () => {
       if (currentProfile) {
         setIsFavorite(currentProfile.favorites.includes(channelId));
       }
-      
-      // Update last watched
-      if (currentProfile) {
-        updateProfile({
-          ...currentProfile,
-          lastWatched: channelId
-        });
-      }
-      
-      // Start tracking watch time
-      setWatchStartTime(Date.now());
       
       document.title = `Steadystream - ${foundChannel.name}`;
     } else {
@@ -63,10 +56,6 @@ const PlayerPage: React.FC = () => {
     
     return () => {
       document.title = 'Steadystream';
-      // Record watch time when leaving
-      if (channel && currentProfile && watchStartTime > 0) {
-        recordWatchHistory();
-      }
     };
   }, [playlist, channelId, currentProfile]);
   
@@ -104,28 +93,18 @@ const PlayerPage: React.FC = () => {
     
     // Find current program
     const currentProg = channelEpg.programs.find(
-      program => program.start <= now && program.end > now
+      program => program.start <= now && (program.end || program.stop) > now
     );
     
     setCurrentProgram(currentProg || null);
   };
   
   const handleMuteToggle = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(!isMuted);
-    }
+    setIsMuted(!isMuted);
   };
   
   const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
+    setIsPlaying(!isPlaying);
   };
   
   const handleFullscreenToggle = () => {
@@ -152,43 +131,6 @@ const PlayerPage: React.FC = () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
-  
-  const recordWatchHistory = () => {
-    if (!channel || !currentProfile || watchStartTime === 0) return;
-    
-    const watchDuration = (Date.now() - watchStartTime) / 1000; // in seconds
-    if (watchDuration < 5) return; // Don't record very short views
-    
-    // Determine time of day
-    const hour = new Date().getHours();
-    let timeOfDay = 'morning';
-    if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
-    else if (hour >= 17 && hour < 22) timeOfDay = 'evening';
-    else if (hour >= 22 || hour < 5) timeOfDay = 'night';
-    
-    const watchHistoryItem = {
-      channelId: channel.id,
-      name: channel.name,
-      logo: channel.logo,
-      timestamp: watchStartTime,
-      watchDuration,
-      category: channel.group,
-      genre: channel.group,
-      timeOfDay
-    };
-    
-    const updatedProfile = {
-      ...currentProfile,
-      watchHistory: [...currentProfile.watchHistory, watchHistoryItem]
-    };
-    
-    // Keep only the last 50 watch history items
-    if (updatedProfile.watchHistory.length > 50) {
-      updatedProfile.watchHistory = updatedProfile.watchHistory.slice(-50);
-    }
-    
-    updateProfile(updatedProfile);
-  };
   
   const handleFavoriteToggle = () => {
     if (!channel || !currentProfile) return;
@@ -234,109 +176,32 @@ const PlayerPage: React.FC = () => {
         ref={containerRef}
         className="relative w-full flex-1 bg-black flex items-center justify-center"
       >
-        <video
-          ref={videoRef}
-          src={channel.url}
-          className="max-h-full max-w-full"
-          controls={false}
-          autoPlay
-          muted={isMuted}
+        <VideoPlayer 
+          url={channel.url}
+          isMuted={isMuted}
+          isPlaying={isPlaying}
+          onPlayStateChange={setIsPlaying}
         />
         
         {/* Control Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50 opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col">
-          {/* Back button and channel name */}
-          <div className="p-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-white hover:bg-black/30"
-              onClick={() => navigate('/channels')}
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to Channels
-            </Button>
-          </div>
-          
-          {/* Center play/pause button */}
-          <div className="flex-1 flex items-center justify-center">
-            <Button 
-              size="lg" 
-              variant="ghost" 
-              className="rounded-full bg-black/30 h-20 w-20 hover:bg-black/50"
-              onClick={handlePlayPause}
-            >
-              {isPlaying ? 
-                <Pause className="h-10 w-10 text-white" /> : 
-                <Play className="h-10 w-10 text-white" />
-              }
-            </Button>
-          </div>
-          
-          {/* Bottom controls */}
-          <div className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:bg-black/30"
-                onClick={handleMuteToggle}
-              >
-                {isMuted ? 
-                  <VolumeX className="h-5 w-5" /> : 
-                  <Volume2 className="h-5 w-5" />
-                }
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`text-white hover:bg-black/30 ${isFavorite ? 'text-steadystream-gold' : ''}`}
-                onClick={handleFavoriteToggle}
-              >
-                <Heart 
-                  className="h-5 w-5" 
-                  fill={isFavorite ? 'currentColor' : 'none'} 
-                />
-              </Button>
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-white hover:bg-black/30"
-              onClick={handleFullscreenToggle}
-            >
-              <Maximize className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        <PlayerControls
+          isMuted={isMuted}
+          isPlaying={isPlaying}
+          isFavorite={isFavorite}
+          isFullscreen={isFullscreen}
+          onMuteToggle={handleMuteToggle}
+          onPlayPause={handlePlayPause}
+          onFullscreenToggle={handleFullscreenToggle}
+          onFavoriteToggle={handleFavoriteToggle}
+          channelName={channel.name}
+        />
       </div>
       
       {/* Program Info */}
-      {currentProgram && (
-        <Card className="bg-black border-t border-steadystream-gold/20 rounded-none">
-          <div className="p-3 flex items-center justify-between">
-            <div>
-              <h3 className="text-steadystream-gold-light font-medium text-lg">
-                {currentProgram.title}
-              </h3>
-              <p className="text-steadystream-secondary text-sm">
-                {new Date(currentProgram.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                {' - '}
-                {new Date(currentProgram.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                {currentProgram.category ? ` • ${currentProgram.category}` : ''}
-              </p>
-            </div>
-            <div className="text-right">
-              <h4 className="text-steadystream-gold-light">{channel.name}</h4>
-              {channel.group && (
-                <p className="text-steadystream-secondary text-sm">{channel.group}</p>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
+      <ProgramInfo 
+        currentProgram={currentProgram} 
+        channel={channel}
+      />
     </div>
   );
 };
