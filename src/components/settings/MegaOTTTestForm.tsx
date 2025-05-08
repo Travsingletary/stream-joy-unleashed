@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { testMegaOTTConnection } from '../../services/megaOTTService';
 const MegaOTTTestForm: React.FC = () => {
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [testResult, setTestResult] = useState<any>(null);
+  const [isHelpVisible, setIsHelpVisible] = useState(false);
 
   // MegaOTT form schema
   const megaOTTSchema = z.object({
@@ -23,7 +24,7 @@ const MegaOTTTestForm: React.FC = () => {
   const megaOTTForm = useForm<z.infer<typeof megaOTTSchema>>({
     resolver: zodResolver(megaOTTSchema),
     defaultValues: {
-      apiKey: ''
+      apiKey: '338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d'
     }
   });
 
@@ -68,10 +69,38 @@ const MegaOTTTestForm: React.FC = () => {
 
   return (
     <div className="mt-6 pt-4 border-t border-steadystream-gold/10">
-      <h3 className="text-steadystream-gold-light text-lg mb-2">Test MegaOTT API Connection</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-steadystream-gold-light text-lg mb-2">Test MegaOTT API Connection</h3>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-6 w-6 p-0 rounded-full" 
+          onClick={() => setIsHelpVisible(!isHelpVisible)}
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+      </div>
+      
       <p className="text-steadystream-secondary mb-4 text-sm">
         Test your connection to the MegaOTT service API
       </p>
+      
+      {isHelpVisible && (
+        <Alert className="mb-4 bg-blue-900/20 border-blue-700">
+          <HelpCircle className="h-4 w-4" />
+          <AlertTitle>MegaOTT API Information</AlertTitle>
+          <AlertDescription className="text-sm">
+            <p>If you're experiencing connection issues:</p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>Verify you have an active MegaOTT subscription</li>
+              <li>Make sure your API key is valid and not expired</li>
+              <li>Check if MegaOTT service is currently available</li>
+              <li>Try using a different API key if available</li>
+              <li>Contact MegaOTT support for further assistance</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {testStatus === 'error' && testResult && (
         <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-700">
@@ -114,7 +143,6 @@ const MegaOTTTestForm: React.FC = () => {
                   <Input 
                     placeholder="Enter your MegaOTT API key" 
                     className="bg-steadystream-black border-steadystream-gold/30 text-white"
-                    defaultValue="338|fB64PDKNmVFjbHXhCV7sf4GmCYTZKP5xApf8IC0D371dc28d"
                     {...field} 
                   />
                 </FormControl>

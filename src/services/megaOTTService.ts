@@ -17,12 +17,45 @@ export interface MegaOTTCreditsResponse {
  * Tests connection to MegaOTT API by checking credits
  */
 export async function testMegaOTTConnection(apiKey: string): Promise<MegaOTTCreditsResponse> {
-  const megaottApiUrl = 'https://megaott.net/api/v1/user/credits';
+  // Try different API endpoints - the main one might have changed
+  const endpoints = [
+    'https://megaott.net/api/v1/user/credits',
+    'https://api.megaott.net/v1/user/credits',
+    'https://megaott.net/api/user/credits'
+  ];
   
-  try {
-    // First attempt without proxy
+  const errors = [];
+  
+  for (const endpoint of endpoints) {
+    console.log(`Trying MegaOTT endpoint: ${endpoint}`);
+    
     try {
-      const response = await fetch(megaottApiUrl, {
+      // First attempt without proxy
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('MegaOTT API Connection Result:', result);
+          return result;
+        } else {
+          const errorText = await response.text();
+          console.log(`Direct connection failed with status ${response.status}: ${errorText}`);
+          errors.push(`Status ${response.status} from ${endpoint}`);
+        }
+      } catch (error) {
+        console.log(`Direct connection to ${endpoint} failed, trying with proxy...`);
+        // Continue to proxy attempt
+      }
+      
+      // If direct connection fails, try with proxy
+      const response = await fetchWithProxy(endpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -32,33 +65,25 @@ export async function testMegaOTTConnection(apiKey: string): Promise<MegaOTTCred
       
       if (response.ok) {
         const result = await response.json();
-        console.log('MegaOTT API Connection Result:', result);
+        console.log('MegaOTT API Connection Result (via proxy):', result);
         return result;
+      } else {
+        const errorText = await response.text();
+        console.log(`Proxy connection failed with status ${response.status}: ${errorText}`);
+        errors.push(`Status ${response.status} from ${endpoint} (via proxy)`);
       }
     } catch (error) {
-      console.log('Direct connection failed, trying with proxy...');
-      // Continue to proxy attempt
+      console.error(`MegaOTT API Connection Error with ${endpoint}:`, error);
+      errors.push(error instanceof Error ? error.message : 'Unknown error');
     }
-    
-    // If direct connection fails, try with proxy
-    const response = await fetchWithProxy(megaottApiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      }
-    });
-    
-    const result = await response.json();
-    console.log('MegaOTT API Connection Result (via proxy):', result);
-    return result;
-  } catch (error) {
-    console.error('MegaOTT API Connection Error:', error);
-    return {
-      status: false,
-      message: error instanceof Error ? error.message : 'Unknown connection error'
-    };
   }
+  
+  console.error('All MegaOTT API endpoints failed:', errors);
+  return {
+    status: false,
+    message: 'All API endpoints failed. Please check your API key and try again later.',
+    error: errors.join('; ')
+  };
 }
 
 /**
