@@ -44,18 +44,19 @@ export const Logo: React.FC<LogoProps> = ({
   size = 'md', 
   className 
 }) => {
+  // Use the newly uploaded logo
   const getImageSource = () => {
     switch (variant) {
       case 'full':
-        return '/logo-full.png';
+        return '/lovable-uploads/steadystream-logo-full.png';
       case 'symbol':
-        return '/logo-symbol.png';
+        return '/lovable-uploads/steadystream-logo-symbol.png';
       case 'icon':
-        return '/logo-icon.png';
+        return '/lovable-uploads/steadystream-logo-symbol.png';
       case 'text':
-        return '/logo-text.png';
+        return '/lovable-uploads/steadystream-logo-text.png';
       default:
-        return '/logo-full.png';
+        return '/lovable-uploads/steadystream-logo-full.png';
     }
   };
 
