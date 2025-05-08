@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { usePlaylist } from '../../hooks/usePlaylist';
 import { XtreamCredentials } from '../../types/playlist';
 import { toast } from '../../hooks/use-toast';
@@ -20,6 +22,8 @@ interface PlaylistImportFormProps {
 const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplete }) => {
   const { loadM3U, loadXtream, isLoading } = usePlaylist();
   const [importType, setImportType] = useState<'m3u' | 'xtream'>('m3u');
+  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const savedM3UUrl = getM3UUrl();
   const savedXtreamCredentials = getXtreamCredentials();
@@ -54,39 +58,72 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
 
   const onM3USubmit = async (data: z.infer<typeof m3uSchema>) => {
     try {
+      setImportStatus('loading');
+      setErrorMessage('');
+      
+      toast({
+        title: "Importing playlist",
+        description: "Please wait while we process your playlist...",
+      });
+      
       await loadM3U(data.url);
+      
+      setImportStatus('success');
       toast({
         title: "Playlist imported",
         description: "M3U playlist has been successfully loaded",
       });
+      
       if (onImportComplete) onImportComplete();
     } catch (error: any) {
+      console.error("Import error:", error);
+      setImportStatus('error');
+      const message = error.message || "Failed to load M3U playlist";
+      setErrorMessage(message);
+      
       toast({
         variant: "destructive",
         title: "Import failed",
-        description: error.message || "Failed to load M3U playlist",
+        description: message,
       });
     }
   };
 
   const onXtreamSubmit = async (data: z.infer<typeof xtreamSchema>) => {
     try {
+      setImportStatus('loading');
+      setErrorMessage('');
+      
+      toast({
+        title: "Connecting to service",
+        description: "Please wait while we connect to your Xtream service...",
+      });
+      
       const credentials: XtreamCredentials = {
         username: data.username,
         password: data.password,
         url: data.url
       };
+      
       await loadXtream(credentials);
+      
+      setImportStatus('success');
       toast({
         title: "Playlist imported",
         description: "Xtream playlist has been successfully loaded",
       });
+      
       if (onImportComplete) onImportComplete();
     } catch (error: any) {
+      console.error("Import error:", error);
+      setImportStatus('error');
+      const message = error.message || "Failed to load Xtream playlist";
+      setErrorMessage(message);
+      
       toast({
         variant: "destructive",
         title: "Import failed",
-        description: error.message || "Failed to load Xtream playlist",
+        description: message,
       });
     }
   };
@@ -101,6 +138,29 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
       </CardHeader>
       
       <CardContent>
+        {importStatus === 'error' && (
+          <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-700">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Import Error</AlertTitle>
+            <AlertDescription>
+              {errorMessage || "There was a problem importing your playlist. Please check your details and try again."}
+            </AlertDescription>
+            <AlertDescription className="mt-2 text-xs">
+              Try using a different URL format or check if the server supports CORS.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {importStatus === 'success' && (
+          <Alert className="mb-4 bg-green-900/20 border-green-700">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Import Successful</AlertTitle>
+            <AlertDescription>
+              Your playlist has been successfully imported.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs defaultValue={importType} className="w-full" onValueChange={(value) => setImportType(value as 'm3u' | 'xtream')}>
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-steadystream-black border-steadystream-gold/20">
             <TabsTrigger 
@@ -143,9 +203,9 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
                 <Button 
                   type="submit" 
                   className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                  disabled={isLoading}
+                  disabled={isLoading || importStatus === 'loading'}
                 >
-                  {isLoading ? 'Importing...' : 'Import M3U Playlist'}
+                  {importStatus === 'loading' ? 'Importing...' : 'Import M3U Playlist'}
                 </Button>
               </form>
             </Form>
@@ -217,9 +277,9 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
                 <Button 
                   type="submit" 
                   className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                  disabled={isLoading}
+                  disabled={isLoading || importStatus === 'loading'}
                 >
-                  {isLoading ? 'Connecting...' : 'Connect Xtream Service'}
+                  {importStatus === 'loading' ? 'Connecting...' : 'Connect Xtream Service'}
                 </Button>
               </form>
             </Form>

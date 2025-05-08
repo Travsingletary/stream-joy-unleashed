@@ -1,16 +1,21 @@
 
 import { Channel, Group, Playlist, XtreamCredentials } from "../types/playlist";
 import { toast } from "../hooks/use-toast";
+import { fetchWithProxy } from "./corsProxyService";
 
 // Function to load M3U playlists
 export async function loadM3UPlaylist(url: string): Promise<Playlist> {
   try {
-    const response = await fetch(url);
+    console.log(`Attempting to load M3U playlist from: ${url}`);
+    
+    // Use our proxy service to fetch the playlist
+    const response = await fetchWithProxy(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch M3U: ${response.status} ${response.statusText}`);
     }
 
     const m3uContent = await response.text();
+    console.log(`Successfully loaded M3U content, length: ${m3uContent.length}`);
     return parseM3UContent(m3uContent);
   } catch (error) {
     console.error("Error loading M3U playlist:", error);
@@ -24,18 +29,22 @@ export async function loadXtreamPlaylist(credentials: XtreamCredentials): Promis
     // Normalize the base URL (remove trailing slashes)
     const baseUrl = credentials.url.replace(/\/+$/, '');
     
-    // Fetch categories
+    // Fetch categories using proxy
     const categoriesUrl = `${baseUrl}/player_api.php?username=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}&action=get_live_categories`;
-    const categoriesResponse = await fetch(categoriesUrl);
+    console.log(`Fetching Xtream categories from: ${categoriesUrl}`);
+    
+    const categoriesResponse = await fetchWithProxy(categoriesUrl);
     if (!categoriesResponse.ok) {
       throw new Error("Failed to authenticate with Xtream provider");
     }
     
     const categories = await categoriesResponse.json();
     
-    // Fetch channels
+    // Fetch channels using proxy
     const channelsUrl = `${baseUrl}/player_api.php?username=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}&action=get_live_streams`;
-    const channelsResponse = await fetch(channelsUrl);
+    console.log(`Fetching Xtream channels from: ${channelsUrl}`);
+    
+    const channelsResponse = await fetchWithProxy(channelsUrl);
     if (!channelsResponse.ok) {
       throw new Error("Failed to fetch channels from Xtream provider");
     }

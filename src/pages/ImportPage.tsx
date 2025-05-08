@@ -14,11 +14,15 @@ import Logo from '@/components/ui/logo';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ImportPage: React.FC = () => {
   const navigate = useNavigate();
   const { loadM3U, loadXtream, isLoading } = usePlaylist();
   const [importType, setImportType] = useState<'m3u' | 'xtream'>('m3u');
+  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // M3U form schema and form handling
   const m3uSchema = z.object({
@@ -50,39 +54,74 @@ const ImportPage: React.FC = () => {
 
   const onM3USubmit = async (data: z.infer<typeof m3uSchema>) => {
     try {
+      setImportStatus('loading');
+      setErrorMessage('');
+      
+      toast({
+        title: "Importing playlist",
+        description: "Please wait while we process your playlist...",
+      });
+      
       await loadM3U(data.url);
+      
+      setImportStatus('success');
       toast({
         title: "Playlist imported",
         description: "M3U playlist has been successfully loaded",
       });
-      navigate('/channels');
+      
+      // Short delay before navigation to show success state
+      setTimeout(() => navigate('/channels'), 1000);
     } catch (error: any) {
+      console.error("Import error:", error);
+      setImportStatus('error');
+      const message = error.message || "Failed to load M3U playlist";
+      setErrorMessage(message);
+      
       toast({
         variant: "destructive",
         title: "Import failed",
-        description: error.message || "Failed to load M3U playlist",
+        description: message,
       });
     }
   };
 
   const onXtreamSubmit = async (data: z.infer<typeof xtreamSchema>) => {
     try {
+      setImportStatus('loading');
+      setErrorMessage('');
+      
+      toast({
+        title: "Connecting to service",
+        description: "Please wait while we connect to your Xtream service...",
+      });
+      
       const credentials: XtreamCredentials = {
         username: data.username,
         password: data.password,
         url: data.url
       };
+      
       await loadXtream(credentials);
+      
+      setImportStatus('success');
       toast({
         title: "Playlist imported",
         description: "Xtream playlist has been successfully loaded",
       });
-      navigate('/channels');
+      
+      // Short delay before navigation to show success state
+      setTimeout(() => navigate('/channels'), 1000);
     } catch (error: any) {
+      console.error("Import error:", error);
+      setImportStatus('error');
+      const message = error.message || "Failed to load Xtream playlist";
+      setErrorMessage(message);
+      
       toast({
         variant: "destructive",
         title: "Import failed",
-        description: error.message || "Failed to load Xtream playlist",
+        description: message,
       });
     }
   };
@@ -104,6 +143,29 @@ const ImportPage: React.FC = () => {
           </CardHeader>
           
           <CardContent>
+            {importStatus === 'error' && (
+              <Alert variant="destructive" className="mb-4 bg-red-900/20 border-red-700">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Import Error</AlertTitle>
+                <AlertDescription>
+                  {errorMessage || "There was a problem importing your playlist. Please check your details and try again."}
+                </AlertDescription>
+                <AlertDescription className="mt-2 text-xs">
+                  Try using a different URL format or check if the server supports CORS.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {importStatus === 'success' && (
+              <Alert className="mb-4 bg-green-900/20 border-green-700">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Import Successful</AlertTitle>
+                <AlertDescription>
+                  Your playlist has been successfully imported. Redirecting to channels...
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Tabs defaultValue="m3u" className="w-full" onValueChange={(value) => setImportType(value as 'm3u' | 'xtream')}>
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-steadystream-black border-steadystream-gold/20">
                 <TabsTrigger 
@@ -146,9 +208,9 @@ const ImportPage: React.FC = () => {
                     <Button 
                       type="submit" 
                       className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                      disabled={isLoading}
+                      disabled={isLoading || importStatus === 'loading'}
                     >
-                      {isLoading ? 'Importing...' : 'Import M3U Playlist'}
+                      {importStatus === 'loading' ? 'Importing...' : 'Import M3U Playlist'}
                     </Button>
                   </form>
                 </Form>
@@ -220,9 +282,9 @@ const ImportPage: React.FC = () => {
                     <Button 
                       type="submit" 
                       className="w-full bg-gold-gradient hover:bg-gold-gradient-hover text-black"
-                      disabled={isLoading}
+                      disabled={isLoading || importStatus === 'loading'}
                     >
-                      {isLoading ? 'Connecting...' : 'Connect Xtream Service'}
+                      {importStatus === 'loading' ? 'Connecting...' : 'Connect Xtream Service'}
                     </Button>
                   </form>
                 </Form>
