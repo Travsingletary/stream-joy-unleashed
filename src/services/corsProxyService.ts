@@ -28,35 +28,48 @@ export const applyProxy = (url: string, proxyIndex = 0): string => {
   return `${PUBLIC_PROXIES[proxyIndex]}${encodeURIComponent(url)}`;
 };
 
+// Interface for fetch options
+interface FetchOptions extends RequestInit {
+  headers?: HeadersInit;
+}
+
 /**
  * Fetches a URL through a CORS proxy
  */
-export const fetchWithProxy = async (url: string): Promise<Response> => {
+export const fetchWithProxy = async (url: string, options: FetchOptions = {}): Promise<Response> => {
   let currentProxyIndex = 0;
   let lastError: Error | null = null;
+  
+  // Set default headers if not provided
+  const fetchOptions: FetchOptions = {
+    ...options,
+    headers: {
+      'Accept': '*/*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      ...(options.headers || {})
+    }
+  };
   
   // Try each proxy until one works
   while (currentProxyIndex < PUBLIC_PROXIES.length) {
     try {
       const proxiedUrl = applyProxy(url, currentProxyIndex);
       console.log(`Trying to fetch with proxy: ${proxiedUrl}`);
-      const response = await fetch(proxiedUrl, {
-        headers: {
-          'Accept': '*/*',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-      });
+      const response = await fetch(proxiedUrl, fetchOptions);
       
       if (response.ok) {
-        // If response is ok but content length is very small, check if valid
-        const contentLength = response.headers.get('Content-Length');
-        if (contentLength && parseInt(contentLength, 10) < 10) {
-          const text = await response.clone().text();
-          if (text.trim() === '') {
-            throw new Error('Empty response from proxy');
-          }
-          if (!text.includes('#EXTM3U')) {
-            throw new Error('Invalid M3U content');
+        // For M3U content, validate it
+        if (url.includes('.m3u') || url.includes('m3u_plus')) {
+          // If response is ok but content length is very small, check if valid
+          const contentLength = response.headers.get('Content-Length');
+          if (contentLength && parseInt(contentLength, 10) < 10) {
+            const text = await response.clone().text();
+            if (text.trim() === '') {
+              throw new Error('Empty response from proxy');
+            }
+            if (!text.includes('#EXTM3U')) {
+              throw new Error('Invalid M3U content');
+            }
           }
         }
         return response;
@@ -72,5 +85,5 @@ export const fetchWithProxy = async (url: string): Promise<Response> => {
   }
   
   // If all proxies fail, throw the last error
-  throw lastError || new Error('All proxies failed. This could be due to CORS restrictions or an invalid URL. Try a direct M3U file URL.');
+  throw lastError || new Error('All proxies failed. This could be due to CORS restrictions or an invalid URL.');
 };

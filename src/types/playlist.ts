@@ -5,6 +5,10 @@ export interface XtreamCredentials {
   url: string;
 }
 
+export interface MegaOTTCredentials {
+  apiKey: string;
+}
+
 export interface Channel {
   id: string;
   name: string;

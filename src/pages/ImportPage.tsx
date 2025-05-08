@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import MegaOTTTestForm from '@/components/settings/MegaOTTTestForm';
 
 const ImportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -313,6 +314,9 @@ const ImportPage: React.FC = () => {
                 Your most recent import will be used as the active playlist.
               </p>
             </div>
+            
+            {/* Add the MegaOTT test form */}
+            <MegaOTTTestForm />
           </CardContent>
           
           <CardFooter className="flex justify-center">
