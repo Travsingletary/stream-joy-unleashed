@@ -1,4 +1,3 @@
-
 import { Channel, Group, Playlist, XtreamCredentials } from "../types/playlist";
 import { toast } from "../hooks/use-toast";
 import { fetchWithProxy } from "./corsProxyService";
@@ -16,6 +15,18 @@ export async function loadM3UPlaylist(url: string): Promise<Playlist> {
 
     const m3uContent = await response.text();
     console.log(`Successfully loaded M3U content, length: ${m3uContent.length}`);
+    
+    // Check for empty content
+    if (!m3uContent || m3uContent.trim() === '') {
+      throw new Error("Empty playlist content received. The URL might be invalid or the server returned an empty response.");
+    }
+    
+    // Check if content starts with #EXTM3U
+    if (!m3uContent.trim().startsWith('#EXTM3U')) {
+      console.error("Content doesn't start with #EXTM3U:", m3uContent.substring(0, 100));
+      throw new Error("Invalid M3U playlist format. The response doesn't appear to be a valid M3U file.");
+    }
+    
     return parseM3UContent(m3uContent);
   } catch (error) {
     console.error("Error loading M3U playlist:", error);
@@ -156,6 +167,12 @@ function parseM3UContent(content: string): Playlist {
   playlist.groups = Array.from(groupMap.values());
   
   console.log(`Loaded M3U playlist: ${playlist.channels.length} channels in ${playlist.groups.length} groups`);
+  
+  // Check if we actually parsed any channels
+  if (playlist.channels.length === 0) {
+    throw new Error('No channels found in the playlist. The M3U file may be empty or in an unsupported format.');
+  }
+  
   return playlist;
 }
 

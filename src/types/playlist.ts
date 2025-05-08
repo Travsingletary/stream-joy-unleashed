@@ -24,4 +24,5 @@ export interface Playlist {
   name?: string;
   groups: Group[];
   channels: Channel[];
+  lastUpdated?: string; // ISO date string
 }

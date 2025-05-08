@@ -24,6 +24,7 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
   const [importType, setImportType] = useState<'m3u' | 'xtream'>('m3u');
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isAdditionalInfoVisible, setIsAdditionalInfoVisible] = useState(false);
 
   const savedM3UUrl = getM3UUrl();
   const savedXtreamCredentials = getXtreamCredentials();
@@ -146,8 +147,24 @@ const PlaylistImportForm: React.FC<PlaylistImportFormProps> = ({ onImportComplet
               {errorMessage || "There was a problem importing your playlist. Please check your details and try again."}
             </AlertDescription>
             <AlertDescription className="mt-2 text-xs">
-              Try using a different URL format or check if the server supports CORS.
+              <Button 
+                variant="link" 
+                className="text-red-400 p-0 h-auto text-xs"
+                onClick={() => setIsAdditionalInfoVisible(!isAdditionalInfoVisible)}
+              >
+                {isAdditionalInfoVisible ? "Hide troubleshooting tips" : "Show troubleshooting tips"}
+              </Button>
             </AlertDescription>
+            
+            {isAdditionalInfoVisible && (
+              <div className="mt-2 space-y-2 text-xs bg-red-900/10 p-2 rounded">
+                <p>• Make sure your M3U URL is directly to an M3U file, not a login page</p>
+                <p>• Try using a different URL format (e.g., add <code>?type=m3u_plus&output=ts</code> for some providers)</p>
+                <p>• Check if your provider requires a specific User-Agent header</p>
+                <p>• Some services require direct IP access and don't work through proxies</p>
+                <p>• Try using an Xtream connection if your provider supports it</p>
+              </div>
+            )}
           </Alert>
         )}
         
