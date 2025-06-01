@@ -13,6 +13,7 @@ import ChannelsPage from "./pages/ChannelsPage";
 import PlayerPage from "./pages/PlayerPage";
 import AdminNotifyPage from "./pages/AdminNotifyPage";
 import VerifyPurchasePage from "./pages/VerifyPurchasePage";
+import SuccessPage from "./pages/SuccessPage";
 import { ProfileProvider } from "./hooks/useProfiles";
 import { NotificationPrompt } from "./components/notification/NotificationPrompt";
 import PurchaseProtectedRoute from "./components/auth/PurchaseProtectedRoute";
@@ -30,6 +31,7 @@ const AppWithProviders = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/verify-purchase" element={<VerifyPurchasePage />} />
+        <Route path="/success" element={<SuccessPage />} />
         
         {/* Protected Routes */}
         <Route element={

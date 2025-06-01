@@ -6,6 +6,8 @@ import { Tv, CalendarDays, LogIn, User, Play, Heart } from "lucide-react";
 import { useProfiles } from "../hooks/useProfiles";
 import { usePlaylist } from "../hooks/usePlaylist";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SubscriptionCard } from "@/components/SubscriptionCard";
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -15,6 +17,7 @@ const Index = () => {
   const {
     playlist
   } = usePlaylist();
+  
   useEffect(() => {
     // If no profiles exist yet, redirect to profile creation
     if (profiles.length === 0) {
@@ -24,10 +27,13 @@ const Index = () => {
 
   // Find last watched channel if any
   const lastWatchedChannel = currentProfile?.lastWatched && playlist?.channels ? playlist.channels.find(ch => ch.id === currentProfile.lastWatched) : null;
+  
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
-  return <div className="min-h-screen flex flex-col items-center justify-center bg-steadystream-black p-4 sm:p-6 lg:p-8">
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-steadystream-black p-4 sm:p-6 lg:p-8">
       {/* Logo and brand header */}
       <div className="text-center mb-8 sm:mb-12">
         <div className="flex flex-col items-center gap-4">
@@ -113,7 +119,7 @@ const Index = () => {
         </div>}
 
       {/* Main content */}
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="bg-black border border-steadystream-gold/20 shadow-lg hover:gold-glow transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-steadystream-gold-light flex items-center gap-2">
@@ -174,6 +180,8 @@ const Index = () => {
             </Button>
           </CardFooter>
         </Card>
+
+        <SubscriptionCard />
       </div>
 
       {/* Features section */}
@@ -216,6 +224,8 @@ const Index = () => {
       <footer className="mt-8 text-center text-steadystream-secondary text-sm">
         <p>© 2025 Steadystream • Premium Streaming Experience</p>
       </footer>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
